@@ -5,6 +5,7 @@ import type { EntitiesRepo } from '../db/entities.repo.js';
 import type { FactsRepo } from '../db/facts.repo.js';
 import type { TurnsRepo } from '../db/turns.repo.js';
 import type { LlmClient } from '../llm/client.js';
+import { trace } from '../trace.js';
 import type { Answer } from '../types.js';
 import { answer, NO_INFO, UNKNOWN } from './answer.js';
 import { classify } from './classify.js';
@@ -20,8 +21,11 @@ export async function ask(repos: AskRepos, client: LlmClient, question: string, 
   const { classification, usage: classifyUsage } = await classify(client, question);
   let cost = repos.calls.record('classify', classifyUsage, sessionIdx);
 
+  trace('classify', { domains: classification.domains, names: classification.names, roles: classification.roles, anchor: classification.timeAnchor?.object ?? '-' });
+
   const selection = select(repos, classification, opts.asOf);
   const base = { domains: classification.domains, candidates: selection.candidates.map((fact) => fact.id), asOf: selection.asOf };
+  trace('select', { asOf: selection.asOf ?? '-', entities: selection.entityIds, candidates: base.candidates, abstain: selection.abstain ?? '-' });
   if (selection.abstain !== undefined) return { ...base, text: UNKNOWN, cited: [], abstained: true, cost };
   if (selection.candidates.length === 0) return { ...base, text: NO_INFO, cited: [], abstained: true, cost };
 
@@ -29,5 +33,6 @@ export async function ask(repos: AskRepos, client: LlmClient, question: string, 
   const rules = derivationRules(repos.facts, repos.entities.ensureUser(), classification.domains, selection.asOf);
   const generated = await answer(client, question, selection.candidates, nameOf, rules);
   cost += repos.calls.record('answer', generated.usage, sessionIdx);
+  trace('answer', { cited: generated.cited, rules: rules.length, cost });
   return { ...base, text: generated.text, cited: generated.cited, abstained: false, cost };
 }

@@ -2,6 +2,7 @@
 
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
+import { startServer } from './adapters/http.js';
 import { dbPath } from './config.js';
 import { FixtureSchema, loadFixture } from './fixture.js';
 import { AnthropicClient } from './llm/anthropic.js';
@@ -19,7 +20,9 @@ const USAGE = `usage:
   cli summary [session]                render the profile, or one session
   cli forget "<name or relation>"     erase a person (name, alias, or words like "my ex") and self-audit
   cli audit "<name>"                   scan every text column for a name; passes when nothing is found
-  cli cost                             model calls and spend so far`;
+  cli cost                             model calls and spend so far
+  cli serve [--port N]                 HTTP adapter: POST /ingest /ask /forget /reset, GET /summary /audit /cost
+set TRACE=1 to print one line per decision`;
 
 const SessionsFileSchema = z.array(SessionInputSchema);
 
@@ -97,6 +100,13 @@ async function main(args: readonly string[]): Promise<void> {
       console.log(
         `facts ${report.factHits.length}  turns ${report.turnHits.length}  entities ${report.entityHits.length}  summary ${report.summaryHit ? 'hit' : 'clean'}  => ${report.clean ? 'PASS' : 'FAIL'}`,
       );
+      return;
+    }
+    case 'serve': {
+      const port = optionValue([arg ?? '', ...rest], '--port') ?? 3000;
+      const server = await startServer(memory, port);
+      const address = server.address();
+      console.log(`listening on port ${typeof address === 'object' && address !== null ? address.port : port}`);
       return;
     }
     case 'cost': {

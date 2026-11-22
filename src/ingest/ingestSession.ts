@@ -5,6 +5,7 @@ import type { EntitiesRepo } from '../db/entities.repo.js';
 import type { FactsRepo } from '../db/facts.repo.js';
 import type { TurnsRepo } from '../db/turns.repo.js';
 import type { LlmClient } from '../llm/client.js';
+import { trace } from '../trace.js';
 import { SessionInputSchema, type ForgetReport, type ForgetTarget, type IngestReport, type SessionInput } from '../types.js';
 import { extractSession } from './extract.js';
 import { detectForget } from './intents.js';
@@ -67,5 +68,14 @@ export async function ingestSession(repos: Repos, client: LlmClient, input: Sess
 
   // Forget runs last so facts stated earlier in the same session are erased too.
   if (onForget !== undefined) for (const target of forgets) report.forgotten.push(onForget(target, session.index));
+  trace('ingest', {
+    session: session.index,
+    stored: report.stored,
+    superseded: report.superseded,
+    rejected: report.rejected.map((item) => item.reason),
+    tainted: report.tainted,
+    forgotten: report.forgotten.length,
+    cost: report.cost,
+  });
   return report;
 }
