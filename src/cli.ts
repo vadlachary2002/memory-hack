@@ -16,6 +16,8 @@ const USAGE = `usage:
   cli ingest <sessions.json> [--until N]  ingest sessions through extraction (model call per session)
   cli facts                            list every fact row, erased included
   cli summary [session]                render the profile, or one session
+  cli forget "<name or relation>"     erase a person (name, alias, or words like "my ex") and self-audit
+  cli audit "<name>"                   scan every text column for a name; passes when nothing is found
   cli cost                             model calls and spend so far`;
 
 const SessionsFileSchema = z.array(SessionInputSchema);
@@ -66,6 +68,24 @@ async function main(args: readonly string[]): Promise<void> {
     }
     case 'summary': {
       console.log(memory.summarise(arg === undefined ? {} : { session: Number(arg) }));
+      return;
+    }
+    case 'forget': {
+      if (arg === undefined) return fail('forget needs a name or relation');
+      const report = memory.forget({ kind: 'entity', name: arg });
+      console.log(
+        `entities ${report.entityIds.join(',') || '-'}  erased facts ${report.erasedFacts.length}  stripped ${report.strippedFacts.length}  redacted turns ${report.redactedTurns.length}`,
+      );
+      for (const probe of report.probes) console.log(`  probe ${probe.name.padEnd(18)} ${probe.passed ? 'pass' : 'FAIL'}`);
+      console.log(`  scan ${report.scanClean ? 'clean' : 'HITS FOUND'}`);
+      return;
+    }
+    case 'audit': {
+      if (arg === undefined) return fail('audit needs a name');
+      const report = memory.audit(arg);
+      console.log(
+        `facts ${report.factHits.length}  turns ${report.turnHits.length}  entities ${report.entityHits.length}  summary ${report.summaryHit ? 'hit' : 'clean'}  => ${report.clean ? 'PASS' : 'FAIL'}`,
+      );
       return;
     }
     case 'cost': {

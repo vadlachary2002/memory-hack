@@ -6,10 +6,11 @@ import { openDb, resetDb, type Db } from './db/connection.js';
 import { EntitiesRepo } from './db/entities.repo.js';
 import { FactsRepo, type FactRow } from './db/facts.repo.js';
 import { TurnsRepo } from './db/turns.repo.js';
+import { audit, forget, type ForgetContext } from './forget/forget.js';
 import { ingestSession, type Repos } from './ingest/ingestSession.js';
 import type { LlmClient } from './llm/client.js';
 import { renderProfile, renderSession } from './render.js';
-import type { Answer, ForgetReport, ForgetTarget, IngestReport, SessionInput } from './types.js';
+import type { Answer, AuditReport, ForgetReport, ForgetTarget, IngestReport, SessionInput } from './types.js';
 
 export type MemoryOptions = { dbPath: string; llm: LlmClient };
 
@@ -42,9 +43,16 @@ export class Memory {
     return Promise.reject(new Error('ask is not built yet'));
   }
 
-  // Built in step 3.
-  forget(_target: ForgetTarget): Promise<ForgetReport> {
-    return Promise.reject(new Error('forget is not built yet'));
+  // Physical erase, strip, redact, then self-audit. No model call. Ids only in the report.
+  forget(target: ForgetTarget, opts: { atSession?: number } = {}): ForgetReport {
+    return forget(this.forgetContext(opts.atSession), target);
+  }
+
+  // Scan every text column and the summary for a name. Used to prove a forget, or to find a leak.
+  audit(name: string): AuditReport {
+    const entity = this.repos.entities.byName(name);
+    const needles = entity ? [entity.canonicalName ?? name, ...entity.aliases] : [name];
+    return audit(this.forgetContext(), needles);
   }
 
   // Deterministic render from facts. Never calls the model.
@@ -79,5 +87,13 @@ export class Memory {
 
   close(): void {
     this.db.close();
+  }
+
+  private forgetContext(atSession?: number): ForgetContext {
+    return {
+      ...this.repos,
+      summarise: () => this.summarise(),
+      atSession: atSession ?? this.repos.turns.latestSession() ?? 0,
+    };
   }
 }

@@ -1,6 +1,6 @@
 {
   "entities": [
-    { "key": "bruno", "name": "Bruno", "type": "pet" },
+    { "key": "bruno", "name": "Bruno", "type": "pet", "roles": ["pet"] },
     { "key": "arjun", "name": "Arjun", "type": "person", "roles": ["manager"] },
     { "key": "priya", "name": "Priya", "type": "person", "aliases": ["Pri"], "roles": ["partner"] },
     { "key": "meera", "name": "Meera", "type": "person", "roles": ["manager"] }

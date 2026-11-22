@@ -184,6 +184,21 @@ export class FactsRepo {
     return rows.map(toRow);
   }
 
+  // Physical erase: content columns nulled, id and predicate kept for lineage. Returns ids changed.
+  eraseByIds(ids: readonly number[], atSession: number): number[] {
+    const stmt = this.db.prepare(
+      'UPDATE facts SET object_text = NULL, object_entity_id = NULL, quote = NULL, erased_at = ? WHERE id = ? AND erased_at IS NULL',
+    );
+    const erased: number[] = [];
+    for (const id of ids) if (stmt.run(atSession, id).changes > 0) erased.push(id);
+    return erased;
+  }
+
+  // Overwrite quote and object text of one row. Used to strip a mention while keeping the fact.
+  rewriteText(id: number, objectText: string | null, quote: string | null): void {
+    this.db.prepare('UPDATE facts SET object_text = ?, quote = ? WHERE id = ?').run(objectText, quote, id);
+  }
+
   // Ids of non-erased rows whose object or quote contains any needle, case-insensitive.
   scanText(needles: readonly string[]): number[] {
     const found = new Set<number>();

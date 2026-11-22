@@ -60,6 +60,19 @@ export class TurnsRepo {
     return row.idx ?? undefined;
   }
 
+  all(): TurnRow[] {
+    const rows = this.db.prepare('SELECT * FROM turns ORDER BY session_idx, idx').all() as RawRow[];
+    return rows.map(toRow);
+  }
+
+  // Physical redaction: text nulled. Returns ids changed.
+  redactByIds(ids: readonly number[], atSession: number): number[] {
+    const stmt = this.db.prepare('UPDATE turns SET text = NULL, redacted_at = ? WHERE id = ? AND redacted_at IS NULL');
+    const redacted: number[] = [];
+    for (const id of ids) if (stmt.run(atSession, id).changes > 0) redacted.push(id);
+    return redacted;
+  }
+
   // Ids of non-redacted turns whose text contains any needle, case-insensitive.
   scanText(needles: readonly string[]): number[] {
     const found = new Set<number>();

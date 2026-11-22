@@ -76,3 +76,14 @@ export const ForgetReportSchema = z.object({
 });
 
 export type ForgetReport = z.infer<typeof ForgetReportSchema>;
+
+// Result of scanning every text column for a name. Ids only.
+export const AuditReportSchema = z.object({
+  factHits: z.array(z.number().int()),
+  turnHits: z.array(z.number().int()),
+  entityHits: z.array(z.number().int()),
+  summaryHit: z.boolean(),
+  clean: z.boolean(),
+});
+
+export type AuditReport = z.infer<typeof AuditReportSchema>;

@@ -40,7 +40,7 @@ export async function ingestSession(repos: Repos, client: LlmClient, input: Sess
     const turnId = turnIds.get(candidate.turnIndex);
     if (turnId === undefined) continue;
     const objectEntityId = resolveObject(repos.entities, candidate, session.index);
-    const outcome = storeCandidate(repos.facts, userId, candidate, objectEntityId, turnId, session.index);
+    const outcome = storeCandidate(repos.facts, repos.entities, userId, candidate, objectEntityId, turnId, session.index);
     switch (outcome.kind) {
       case 'stored':
         report.stored.push(outcome.id);
