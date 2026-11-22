@@ -35,8 +35,10 @@ export class Memory {
   }
 
   // Store one session: taint, extract, validate, resolve, store. One model call at most.
+  // A "forget ..." request inside the session runs the full erase-and-audit path.
   ingest(session: SessionInput): Promise<IngestReport> {
-    return ingestSession(this.repos, this.options.llm, session);
+    const onForget = (target: ForgetTarget, atSession: number): ForgetReport => this.forget(target, { atSession });
+    return ingestSession(this.repos, this.options.llm, session, onForget);
   }
 
   // Classify, closed-world select, cited answer. Unknown people or roles abstain with no answer call.

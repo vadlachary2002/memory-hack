@@ -11,6 +11,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "cli": "tsx src/cli.ts",
+    "generate": "tsx harness/generate.ts",
     "harness": "tsx harness/score.ts"
   },
   "dependencies": {

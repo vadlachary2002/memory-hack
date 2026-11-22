@@ -36,12 +36,34 @@ export const RejectReasonSchema = z.enum([
 
 export type RejectReason = z.infer<typeof RejectReasonSchema>;
 
+export const ForgetTargetSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('entity'), name: z.string().min(1) }),
+  z.object({ kind: z.literal('predicate'), predicate: PredicateSchema }),
+  z.object({ kind: z.literal('domain'), domain: DomainSchema }),
+]);
+
+export type ForgetTarget = z.infer<typeof ForgetTargetSchema>;
+
+// Ids only, never names.
+export const ForgetReportSchema = z.object({
+  entityIds: z.array(z.number().int()),
+  erasedFacts: z.array(z.number().int()),
+  strippedFacts: z.array(z.number().int()),
+  redactedTurns: z.array(z.number().int()),
+  probes: z.array(z.object({ name: z.string(), passed: z.boolean() })),
+  scanClean: z.boolean(),
+});
+
+export type ForgetReport = z.infer<typeof ForgetReportSchema>;
+
 export const IngestReportSchema = z.object({
   session: z.number().int(),
   stored: z.array(z.number().int()),
   superseded: z.array(z.number().int()),
   rejected: z.array(z.object({ reason: RejectReasonSchema, candidate: z.string() })),
   tainted: z.number().int(),
+  // Forget requests found in the session's user turns and carried out.
+  forgotten: z.array(ForgetReportSchema),
   cost: z.number(),
 });
 
@@ -59,25 +81,6 @@ export const AnswerSchema = z.object({
 });
 
 export type Answer = z.infer<typeof AnswerSchema>;
-
-export const ForgetTargetSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('entity'), name: z.string().min(1) }),
-  z.object({ kind: z.literal('predicate'), predicate: PredicateSchema }),
-  z.object({ kind: z.literal('domain'), domain: DomainSchema }),
-]);
-
-export type ForgetTarget = z.infer<typeof ForgetTargetSchema>;
-
-export const ForgetReportSchema = z.object({
-  entityIds: z.array(z.number().int()),
-  erasedFacts: z.array(z.number().int()),
-  strippedFacts: z.array(z.number().int()),
-  redactedTurns: z.array(z.number().int()),
-  probes: z.array(z.object({ name: z.string(), passed: z.boolean() })),
-  scanClean: z.boolean(),
-});
-
-export type ForgetReport = z.infer<typeof ForgetReportSchema>;
 
 // Result of scanning every text column for a name. Ids only.
 export const AuditReportSchema = z.object({
