@@ -21,10 +21,11 @@ Steps 1 to 3 of 7 done.
 - Step 3: `forget` by name, alias, relationship word ("my ex", "my old manager"), predicate, or domain. Physical erase of the person's facts, strip of passing mentions, redaction of raw turns, role-based resolution through closed relationships, four self-probes and a database-wide scan. The report carries ids only. `audit` scans for any name on demand.
 - Step 4: `ask` with one classify call, a closed-world check in code (unknown person or role answers "I don't know" with no answer call), need-to-know selection by domain adjacency plus named entities, and a cited answer whose uncited sentences are dropped.
 - Step 5: time anchors ("when I got Bruno" answers as of the adoption session) and the manager-to-approver derivation rule, applied at answer time and never stored.
+- Step 6: "forget ..." requests inside chat turns are detected in code and carried out; a seeded 60-session practice history for all 8 scenarios (`npm run generate`), a batch adapter, and a scorer that grades right, stale, false recall, leak and cost (`npm run harness`, needs a key).
 
 ```sh
 npm install
-npm test                                  # 65 unit tests, no API key needed
+npm test                                  # 71 unit tests, no API key needed
 npm run cli -- reset
 npm run cli -- load fixtures/facts.json   # replays a hand-written 46-session story, no model
 npm run cli -- facts                      # every row with open/closed state
@@ -48,4 +49,4 @@ npm run cli -- ask "what does my sister do"      # abstains, one classify call o
 npm run cli -- ask "dinner idea for tonight"     # peanuts and mildly spicy are candidates
 ```
 
-Next: step 6, the 60-session harness and scorer. Build order is in the plan.
+Next: step 7, HTTP adapter, trace panel and the demo script. Build order is in the plan.

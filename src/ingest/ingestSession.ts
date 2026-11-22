@@ -1,60 +1,71 @@
-// Orchestrates one session: store turns, taint, extract, resolve, store, record cost.
+// Orchestrates one session: store turns, taint, extract, resolve, store, then honour forget requests.
 
 import type { CallsRepo } from '../db/calls.repo.js';
 import type { EntitiesRepo } from '../db/entities.repo.js';
 import type { FactsRepo } from '../db/facts.repo.js';
 import type { TurnsRepo } from '../db/turns.repo.js';
 import type { LlmClient } from '../llm/client.js';
-import { SessionInputSchema, type IngestReport, type SessionInput } from '../types.js';
+import { SessionInputSchema, type ForgetReport, type ForgetTarget, type IngestReport, type SessionInput } from '../types.js';
 import { extractSession } from './extract.js';
+import { detectForget } from './intents.js';
 import { resolveObject } from './resolve.js';
 import { storeCandidate } from './store.js';
 import { splitTurn, type Span } from './taint.js';
 
 export type Repos = { facts: FactsRepo; entities: EntitiesRepo; turns: TurnsRepo; calls: CallsRepo };
 
-export async function ingestSession(repos: Repos, client: LlmClient, input: SessionInput): Promise<IngestReport> {
+// Supplied by Memory so a forget request inside a session runs the full erase-and-audit path.
+export type OnForget = (target: ForgetTarget, atSession: number) => ForgetReport;
+
+export async function ingestSession(repos: Repos, client: LlmClient, input: SessionInput, onForget?: OnForget): Promise<IngestReport> {
   const session = SessionInputSchema.parse(input);
-  const report: IngestReport = { session: session.index, stored: [], superseded: [], rejected: [], tainted: 0, cost: 0 };
+  const report: IngestReport = { session: session.index, stored: [], superseded: [], rejected: [], tainted: 0, forgotten: [], cost: 0 };
   const userId = repos.entities.ensureUser();
   repos.turns.addSession(session.index, session.date);
 
   // Turn indices are 1-based and count every turn, so a quote can be traced to a line in the transcript.
   const turnIds = new Map<number, number>();
   const clean: Span[] = [];
+  const forgets: ForgetTarget[] = [];
   session.turns.forEach((turn, position) => {
     const turnIndex = position + 1;
     turnIds.set(turnIndex, repos.turns.addTurn(session.index, turnIndex, turn.role, turn.text));
     if (turn.role !== 'user') return;
     const split = splitTurn(turnIndex, turn.text);
-    clean.push(...split.clean);
     report.tainted += split.tainted.length;
+    // A forget request is an instruction, not a fact: it is carried out, never extracted.
+    const requests = split.clean.flatMap((span) => detectForget(span.text));
+    if (requests.length > 0) forgets.push(...requests);
+    else clean.push(...split.clean);
   });
-  if (clean.length === 0) return report;
 
-  const extracted = await extractSession(client, clean);
-  report.cost = repos.calls.record('extract', extracted.usage, session.index);
-  report.rejected.push(...extracted.rejected);
-
-  for (const candidate of extracted.accepted) {
-    const turnId = turnIds.get(candidate.turnIndex);
-    if (turnId === undefined) continue;
-    const objectEntityId = resolveObject(repos.entities, candidate, session.index);
-    const outcome = storeCandidate(repos.facts, repos.entities, userId, candidate, objectEntityId, turnId, session.index);
-    switch (outcome.kind) {
-      case 'stored':
-        report.stored.push(outcome.id);
-        report.superseded.push(...outcome.superseded);
-        break;
-      case 'closed':
-        report.superseded.push(...outcome.ids);
-        break;
-      case 'rejected':
-        report.rejected.push({ reason: outcome.reason, candidate: `${candidate.predicate} ${candidate.object}` });
-        break;
-      case 'noop':
-        break;
+  if (clean.length > 0) {
+    const extracted = await extractSession(client, clean);
+    report.cost = repos.calls.record('extract', extracted.usage, session.index);
+    report.rejected.push(...extracted.rejected);
+    for (const candidate of extracted.accepted) {
+      const turnId = turnIds.get(candidate.turnIndex);
+      if (turnId === undefined) continue;
+      const objectEntityId = resolveObject(repos.entities, candidate, session.index);
+      const outcome = storeCandidate(repos.facts, repos.entities, userId, candidate, objectEntityId, turnId, session.index);
+      switch (outcome.kind) {
+        case 'stored':
+          report.stored.push(outcome.id);
+          report.superseded.push(...outcome.superseded);
+          break;
+        case 'closed':
+          report.superseded.push(...outcome.ids);
+          break;
+        case 'rejected':
+          report.rejected.push({ reason: outcome.reason, candidate: `${candidate.predicate} ${candidate.object}` });
+          break;
+        case 'noop':
+          break;
+      }
     }
   }
+
+  // Forget runs last so facts stated earlier in the same session are erased too.
+  if (onForget !== undefined) for (const target of forgets) report.forgotten.push(onForget(target, session.index));
   return report;
 }
