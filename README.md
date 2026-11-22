@@ -19,10 +19,11 @@ Steps 1 to 3 of 7 done.
 - Step 1: schema, closed vocabulary with domain adjacency, fact ledger with functional supersession and validity intervals, deterministic renderer, fixture loader, bare CLI.
 - Step 2: the `Memory` library with `ingest`, a one-method LLM client interface with an Anthropic implementation, taint split of pasted text, one extraction call per session with substring validation in code, entity resolution, and the storage gate (account numbers and instructions refused). The pasted-email fixture stores nothing.
 - Step 3: `forget` by name, alias, relationship word ("my ex", "my old manager"), predicate, or domain. Physical erase of the person's facts, strip of passing mentions, redaction of raw turns, role-based resolution through closed relationships, four self-probes and a database-wide scan. The report carries ids only. `audit` scans for any name on demand.
+- Step 4: `ask` with one classify call, a closed-world check in code (unknown person or role answers "I don't know" with no answer call), need-to-know selection by domain adjacency plus named entities, and a cited answer whose uncited sentences are dropped.
 
 ```sh
 npm install
-npm test                                  # 53 unit tests, no API key needed
+npm test                                  # 60 unit tests, no API key needed
 npm run cli -- reset
 npm run cli -- load fixtures/facts.json   # replays a hand-written 46-session story, no model
 npm run cli -- facts                      # every row with open/closed state
@@ -40,4 +41,10 @@ npm run cli -- facts
 npm run cli -- cost                       # calls and spend per purpose
 ```
 
-Next: step 4, classify, select and answer with closed-world abstention and citation stripping. Build order is in the plan.
+```sh
+npm run cli -- ask "will it rain tomorrow"       # allergy never reaches the prompt
+npm run cli -- ask "what does my sister do"      # abstains, one classify call only
+npm run cli -- ask "dinner idea for tonight"     # peanuts and mildly spicy are candidates
+```
+
+Next: step 5, temporal anchors and the manager rule. Build order is in the plan.

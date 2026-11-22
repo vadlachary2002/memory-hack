@@ -9,6 +9,7 @@ import { TurnsRepo } from './db/turns.repo.js';
 import { audit, forget, type ForgetContext } from './forget/forget.js';
 import { ingestSession, type Repos } from './ingest/ingestSession.js';
 import type { LlmClient } from './llm/client.js';
+import { ask, type AskOptions } from './recall/ask.js';
 import { renderProfile, renderSession } from './render.js';
 import type { Answer, AuditReport, ForgetReport, ForgetTarget, IngestReport, SessionInput } from './types.js';
 
@@ -38,9 +39,9 @@ export class Memory {
     return ingestSession(this.repos, this.options.llm, session);
   }
 
-  // Built in step 4.
-  ask(_question: string, _opts?: { asOf?: number }): Promise<Answer> {
-    return Promise.reject(new Error('ask is not built yet'));
+  // Classify, closed-world select, cited answer. Unknown people or roles abstain with no answer call.
+  ask(question: string, opts: AskOptions = {}): Promise<Answer> {
+    return ask(this.repos, this.options.llm, question, opts);
   }
 
   // Physical erase, strip, redact, then self-audit. No model call. Ids only in the report.
