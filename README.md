@@ -10,8 +10,20 @@ See [docs/plan.md](docs/plan.md) for the full design, schema, scenario-to-mechan
 
 ## Stack
 
-TypeScript, Node 20, SQLite (better-sqlite3), Anthropic SDK, vitest. CLI with a trace panel.
+TypeScript, Node 22, SQLite (better-sqlite3), Anthropic SDK behind a one-method interface, zod, vitest. CLI with a trace panel.
 
 ## Status
 
-Scaffold only. Build order and verification are in the plan.
+Step 1 of 7 done: schema, closed vocabulary with domain adjacency, fact ledger with functional supersession and validity intervals, deterministic renderer, fixture loader, bare CLI. No model calls yet.
+
+```sh
+npm install
+npm test                                  # 21 unit tests, no API key needed
+npm run cli -- reset
+npm run cli -- load fixtures/facts.json   # replays a hand-written 46-session story
+npm run cli -- facts                      # every row with open/closed state
+npm run cli -- summary                    # profile rendered from facts
+npm run cli -- summary 5                  # what one session recorded
+```
+
+Next: step 2, taint split and extraction with substring validation (first model call). Build order is in the plan.

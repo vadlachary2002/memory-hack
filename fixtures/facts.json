@@ -1,0 +1,90 @@
+{
+  "entities": [
+    { "key": "bruno", "name": "Bruno", "type": "pet" },
+    { "key": "arjun", "name": "Arjun", "type": "person", "roles": ["manager"] },
+    { "key": "priya", "name": "Priya", "type": "person", "aliases": ["Pri"], "roles": ["partner"] },
+    { "key": "meera", "name": "Meera", "type": "person", "roles": ["manager"] }
+  ],
+  "events": [
+    {
+      "session": 2,
+      "turn": "Finally done with the move, I moved to Pune last month for the new job.",
+      "fact": { "predicate": "lives_in", "object": "Pune", "quote": "I moved to Pune last month" }
+    },
+    {
+      "session": 3,
+      "turn": "Morning routine sorted: I like filter coffee more than anything.",
+      "fact": { "predicate": "prefers", "object": "filter coffee", "quote": "I like filter coffee", "domains": ["food", "preferences"] }
+    },
+    {
+      "session": 5,
+      "turn": "Big news, Priya and I adopted Bruno, a beagle puppy!",
+      "fact": { "predicate": "adopted_pet", "object": "Bruno", "objectEntity": "bruno", "quote": "Priya and I adopted Bruno" }
+    },
+    {
+      "session": 7,
+      "turn": "For dinner ideas keep in mind I like my food mildly spicy, not too hot.",
+      "fact": { "predicate": "prefers", "object": "mildly spicy", "quote": "I like my food mildly spicy", "domains": ["food", "dining", "preferences"] }
+    },
+    {
+      "session": 9,
+      "turn": "Also I'm allergic to peanuts, so no satay please.",
+      "fact": { "predicate": "allergic_to", "object": "peanuts", "quote": "I'm allergic to peanuts" }
+    },
+    {
+      "session": 12,
+      "turn": "Started properly this week. My manager is Arjun, seems decent.",
+      "fact": { "predicate": "reports_to", "object": "Arjun", "objectEntity": "arjun", "quote": "My manager is Arjun" }
+    },
+    {
+      "session": 14,
+      "turn": "Priya and I moved in together last weekend.",
+      "fact": { "predicate": "partner_of", "object": "Priya", "objectEntity": "priya", "quote": "Priya and I moved in together" }
+    },
+    {
+      "session": 16,
+      "turn": "Switched to an iPhone finally, the Android was dying.",
+      "fact": { "predicate": "attribute", "attrKey": "phone", "object": "iPhone", "quote": "Switched to an iPhone", "domains": ["tech"] }
+    },
+    {
+      "session": 18,
+      "turn": "Update: shifted to Bengaluru for the Whitefield office.",
+      "fact": { "predicate": "lives_in", "object": "Bengaluru", "quote": "shifted to Bengaluru" }
+    },
+    {
+      "session": 20,
+      "turn": "Looking at flights to Goa for a long weekend, nothing booked.",
+      "fact": { "predicate": "searched_for", "object": "flights to Goa", "quote": "Looking at flights to Goa" }
+    },
+    {
+      "session": 22,
+      "turn": "Started a side project, a budgeting app in React.",
+      "fact": { "predicate": "started_project", "object": "budgeting app", "quote": "Started a side project, a budgeting app" }
+    },
+    {
+      "session": 27,
+      "turn": "Dropped the budgeting app, no time for it.",
+      "close": { "predicate": "started_project", "object": "budgeting app" }
+    },
+    {
+      "session": 30,
+      "turn": "Still allergic to peanuts by the way, had a scare at lunch.",
+      "fact": { "predicate": "allergic_to", "object": "peanuts", "quote": "Still allergic to peanuts" }
+    },
+    {
+      "session": 35,
+      "turn": "Reorg happened. Meera is my new manager from Monday.",
+      "fact": { "predicate": "reports_to", "object": "Meera", "objectEntity": "meera", "quote": "Meera is my new manager" }
+    },
+    {
+      "session": 44,
+      "turn": "Third move in two years: now in Hyderabad, closer to family.",
+      "fact": { "predicate": "lives_in", "object": "Hyderabad", "quote": "now in Hyderabad" }
+    },
+    {
+      "session": 46,
+      "turn": "Priya and I broke up last week. Keeping Bruno.",
+      "close": { "predicate": "partner_of", "objectEntity": "priya" }
+    }
+  ]
+}
