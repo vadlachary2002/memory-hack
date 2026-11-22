@@ -116,6 +116,25 @@ export class EntitiesRepo {
     this.db.prepare('UPDATE entities SET roles_json = ? WHERE id = ?').run(JSON.stringify(merge([], roles)), id);
   }
 
+  // Every non-erased entity carrying the role, for ambiguity checks.
+  allByRole(role: string): EntityRow[] {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM entities WHERE erased_at IS NULL
+         AND EXISTS (SELECT 1 FROM json_each(entities.roles_json) WHERE lower(json_each.value) = lower(?)) ORDER BY id`,
+      )
+      .all(role.trim()) as RawRow[];
+    return rows.map(toRow);
+  }
+
+  // Physical erase: name, aliases and roles gone; the id stays so fact lineage still points somewhere.
+  erase(id: number, atSession: number): boolean {
+    const info = this.db
+      .prepare("UPDATE entities SET canonical_name = NULL, aliases_json = '[]', roles_json = '[]', erased_at = ? WHERE id = ? AND erased_at IS NULL")
+      .run(atSession, id);
+    return info.changes > 0;
+  }
+
   // Display name for rendering; erased entities render as a placeholder.
   nameOf(id: number): string {
     const row = this.byId(id);

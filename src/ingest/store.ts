@@ -1,8 +1,11 @@
 // The last gate before the ledger. Refusals here are rules, not judgment.
 
+import type { EntitiesRepo } from '../db/entities.repo.js';
 import type { FactsRepo } from '../db/facts.repo.js';
 import type { RejectReason } from '../types.js';
+import { PREDICATES } from '../vocab.js';
 import type { Candidate } from './extract.js';
+import { markFormer, markSupersededFormer } from './resolve.js';
 
 export type StoreOutcome =
   | { kind: 'stored'; id: number; superseded: number[] }
@@ -26,6 +29,7 @@ export function gate(candidate: Candidate): RejectReason | undefined {
 
 export function storeCandidate(
   facts: FactsRepo,
+  entities: EntitiesRepo,
   userId: number,
   candidate: Candidate,
   objectEntityId: number | undefined,
@@ -41,6 +45,9 @@ export function storeCandidate(
       objectEntityId,
       attrKey,
     });
+    if (ids.length > 0 && objectEntityId !== undefined && PREDICATES[candidate.predicate].relational) {
+      markFormer(entities, objectEntityId, candidate.predicate);
+    }
     return { kind: 'closed', ids };
   }
   const result = facts.insert({
@@ -55,5 +62,6 @@ export function storeCandidate(
     domains: candidate.domains.length > 0 ? candidate.domains : undefined,
   });
   if (result.noop) return { kind: 'noop', id: result.id };
+  markSupersededFormer(entities, facts, result.superseded, candidate.predicate, objectEntityId);
   return { kind: 'stored', id: result.id, superseded: result.superseded };
 }

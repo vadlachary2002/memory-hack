@@ -5,6 +5,7 @@ import type { Db } from './db/connection.js';
 import { EntitiesRepo } from './db/entities.repo.js';
 import { FactsRepo, type InsertResult } from './db/facts.repo.js';
 import { TurnsRepo } from './db/turns.repo.js';
+import { markFormer, markSupersededFormer } from './ingest/resolve.js';
 import { DomainSchema, PredicateSchema } from './types.js';
 
 const FixtureEntitySchema = z.object({
@@ -83,6 +84,7 @@ export function loadFixture(db: Db, fixture: Fixture): LoadReport {
       });
       if (result.noop) report.noops += 1;
       else report.inserted.push(result.id);
+      markSupersededFormer(entities, facts, result.superseded, event.fact.predicate, objectEntityId);
       report.superseded.push(...result.superseded);
     }
 
@@ -93,6 +95,7 @@ export function loadFixture(db: Db, fixture: Fixture): LoadReport {
         objectEntityId,
         attrKey: event.close.attrKey,
       });
+      if (closed.length > 0 && objectEntityId !== undefined) markFormer(entities, objectEntityId, event.close.predicate);
       report.closed.push(...closed);
     }
   }

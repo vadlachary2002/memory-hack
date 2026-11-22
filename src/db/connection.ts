@@ -16,6 +16,8 @@ export function openDb(path: string): Db {
   if (!inMemory) mkdirSync(dirname(path), { recursive: true });
   const db = new Database(path);
   db.pragma('foreign_keys = ON');
+  // Overwrite freed pages with zeros so erased text does not linger in the file.
+  db.pragma('secure_delete = ON');
   migrate(db);
   return db;
 }
