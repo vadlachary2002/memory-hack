@@ -37,6 +37,21 @@ export function dbPath(): string {
   return nonEmpty(process.env.DB_PATH) ?? DEFAULT_DB_PATH;
 }
 
+// One database file per user. Isolation is a file boundary, not a WHERE clause.
+export const DEFAULT_USERS_DIR = 'data/users';
+
+const MAX_USER_ID_CHARS = 64;
+
+export function dbPathForUser(userId: string, dir: string = DEFAULT_USERS_DIR): string {
+  const safe = userId
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_')
+    .slice(0, MAX_USER_ID_CHARS);
+  if (safe === '' || safe === '_') throw new Error(`invalid user id "${userId}"`);
+  return `${dir}/${safe}.db`;
+}
+
 function nonEmpty(value: string | undefined): string | undefined {
   return value !== undefined && value.trim() !== '' ? value.trim() : undefined;
 }

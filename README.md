@@ -14,16 +14,25 @@ TypeScript, Node 22, SQLite (better-sqlite3), Anthropic SDK behind a one-method 
 
 ## Status
 
-Step 1 of 7 done: schema, closed vocabulary with domain adjacency, fact ledger with functional supersession and validity intervals, deterministic renderer, fixture loader, bare CLI. No model calls yet.
+Steps 1 and 2 of 7 done.
+
+- Step 1: schema, closed vocabulary with domain adjacency, fact ledger with functional supersession and validity intervals, deterministic renderer, fixture loader, bare CLI.
+- Step 2: the `Memory` library with `ingest`, a one-method LLM client interface with an Anthropic implementation, taint split of pasted text, one extraction call per session with substring validation in code, entity resolution, and the storage gate (account numbers and instructions refused). The pasted-email fixture stores nothing.
 
 ```sh
 npm install
-npm test                                  # 21 unit tests, no API key needed
+npm test                                  # 39 unit tests, no API key needed
 npm run cli -- reset
-npm run cli -- load fixtures/facts.json   # replays a hand-written 46-session story
+npm run cli -- load fixtures/facts.json   # replays a hand-written 46-session story, no model
 npm run cli -- facts                      # every row with open/closed state
 npm run cli -- summary                    # profile rendered from facts
 npm run cli -- summary 5                  # what one session recorded
+
+cp .env.example .env                      # add ANTHROPIC_API_KEY
+npm run cli -- reset
+npm run cli -- ingest fixtures/sessions.json   # one extraction call per session
+npm run cli -- facts
+npm run cli -- cost                       # calls and spend per purpose
 ```
 
-Next: step 2, taint split and extraction with substring validation (first model call). Build order is in the plan.
+Next: step 3, forget with erase-vs-strip, redaction, self-audit and the deletion invariant test. Build order is in the plan.
