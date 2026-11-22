@@ -10,8 +10,9 @@ import { SessionInputSchema, type ForgetReport, type ForgetTarget, type IngestRe
 import { extractSession } from './extract.js';
 import { detectForget } from './intents.js';
 import { resolveObject } from './resolve.js';
+import { scrubAccountNumbers } from './secrets.js';
 import { storeCandidate } from './store.js';
-import { splitTurn, type Span } from './taint.js';
+import { splitTurn, storableText, type Span } from './taint.js';
 
 export type Repos = { facts: FactsRepo; entities: EntitiesRepo; turns: TurnsRepo; calls: CallsRepo };
 
@@ -22,6 +23,7 @@ export async function ingestSession(repos: Repos, client: LlmClient, input: Sess
   const session = SessionInputSchema.parse(input);
   const report: IngestReport = { session: session.index, stored: [], superseded: [], rejected: [], tainted: 0, forgotten: [], cost: 0 };
   const userId = repos.entities.ensureUser();
+  if (repos.turns.hasSession(session.index)) throw new Error(`session ${session.index} was already ingested`);
   repos.turns.addSession(session.index, session.date);
 
   // Turn indices are 1-based and count every turn, so a quote can be traced to a line in the transcript.
@@ -30,7 +32,9 @@ export async function ingestSession(repos: Repos, client: LlmClient, input: Sess
   const forgets: ForgetTarget[] = [];
   session.turns.forEach((turn, position) => {
     const turnIndex = position + 1;
-    turnIds.set(turnIndex, repos.turns.addTurn(session.index, turnIndex, turn.role, turn.text));
+    // The transcript never keeps pasted content or account numbers, even though it is never recalled.
+    const stored = scrubAccountNumbers(turn.role === 'user' ? storableText(turn.text) : turn.text);
+    turnIds.set(turnIndex, repos.turns.addTurn(session.index, turnIndex, turn.role, stored));
     if (turn.role !== 'user') return;
     const split = splitTurn(turnIndex, turn.text);
     report.tainted += split.tainted.length;

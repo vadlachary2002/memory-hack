@@ -6,6 +6,7 @@ import type { RejectReason } from '../types.js';
 import { PREDICATES } from '../vocab.js';
 import type { Candidate } from './extract.js';
 import { markFormer, markSupersededFormer } from './resolve.js';
+import { hasAccountNumber } from './secrets.js';
 
 export type StoreOutcome =
   | { kind: 'stored'; id: number; superseded: number[] }
@@ -13,16 +14,13 @@ export type StoreOutcome =
   | { kind: 'closed'; ids: number[] }
   | { kind: 'rejected'; reason: RejectReason };
 
-// Bank and account shapes: "ACC-7781", "HDFC00012345", 8+ digit runs, IBAN-like strings.
-const ACCOUNT_NUMBER = /\b[A-Z]{2,5}-?\d{4,}\b|\b\d{8,}\b|\b[A-Z]{2}\d{2}[A-Z0-9]{10,}\b/;
-
 // Text addressed to the assistant or phrased as an instruction is not a statement about the user.
 const INSTRUCTION =
   /^(please\s+)?(send|pay|transfer|wire|deposit|remember|always|never|ignore|forward|do not|don't|make sure|note that|from now on|you must|you should|you need to)\b/i;
 const ADDRESSED = /\b(you (must|should|need to|have to)|the assistant|system prompt|as an ai)\b/i;
 
 export function gate(candidate: Candidate): RejectReason | undefined {
-  if (ACCOUNT_NUMBER.test(candidate.object) || ACCOUNT_NUMBER.test(candidate.quote)) return 'account_number';
+  if (hasAccountNumber(candidate.object) || hasAccountNumber(candidate.quote)) return 'account_number';
   if (INSTRUCTION.test(candidate.quote.trim()) || ADDRESSED.test(candidate.quote)) return 'not_about_user';
   return undefined;
 }

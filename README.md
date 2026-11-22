@@ -30,7 +30,7 @@ TypeScript, Node 22, SQLite (better-sqlite3), Anthropic SDK behind a one-method 
 
 ```sh
 npm install                    # Node 22
-npm test                       # 73 unit tests, no API key needed
+npm test                       # 74 unit tests, no API key needed
 npm run cli -- reset
 npm run cli -- load fixtures/facts.json      # 46-session story, no model
 npm run cli -- facts
@@ -52,7 +52,7 @@ npm run cli -- ask "where should I send my payments"      # 6 poison never store
 npm run cli -- ask "what does my sister do"               # 7 unknown role, abstains, zero answer calls
 npm run cli -- ask "any trips coming up"                  # 8 scratch tier, abstains
 npm run cli -- audit Priya                                # FAIL: she is still known
-npm run cli -- ingest data/practice/history.json          # session 48 says "forget everything about my ex"
+npm run cli -- ingest data/practice/history.json          # skips s1..s47, session 48 says "forget everything about my ex"
 npm run cli -- audit Priya                                # PASS: nothing anywhere
 npm run cli -- ask "who did I move in with"               # 5 abstains, no leak
 npm run cli -- summary
@@ -99,4 +99,14 @@ tests/               vitest, fake client only
 
 ## Status
 
-All seven build steps are done. The live run against the model has not been executed yet; everything is proven with the fake client. Next: run `npm run harness` with a key and tune the three prompts where needed.
+All seven build steps are done and the first live run has been scored on Claude Opus 5.5 (22 Nov 2026):
+
+| Metric | Result |
+|---|---|
+| right | 13 / 13 |
+| stale | 0 |
+| false recall | 0 |
+| leak in answers | 0 |
+| cost, full 60-session replay plus 13 questions | $0.12 |
+
+The one finding of that run was a database leak: the pasted email was kept verbatim in the raw transcript. Fixed in step 8: the transcript now stores user turns with pasted paragraphs replaced by a marker and account-number shapes scrubbed, so the poison string exists nowhere in the file.

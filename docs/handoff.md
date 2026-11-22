@@ -4,17 +4,18 @@ Read this first, then `docs/plan.md`. Everything below was true on 22 Nov 2026.
 
 ## Where things stand
 
-- All seven build steps are built and pushed. 73 unit tests, no API key needed. See README for commands.
-- Branches, one per step, each based on the previous: `step-1-ledger` (PR into main), `step-2-ingest`, `step-3-forget`, `step-4-ask`, `step-5-temporal`, `step-6-harness`, `step-7-adapters`. `main-hi6j98` is the cloud working branch and tracks the latest step. Merge in order; GitHub retargets the next PR when the base branch is deleted.
+- All seven build steps plus a live-run fix are built and pushed. 74 unit tests, no API key needed. See README for commands.
+- Branches, one per step, each based on the previous: `step-1-ledger` (PR #4 into main), `step-2-ingest` (#5), `step-3-forget` (#6), `step-4-ask` (#7), `step-5-temporal` (#8), `step-6-harness` (#9), `step-7-adapters` (#10), `step-8-live-fixes` (#11). `main-hi6j98` is the cloud working branch and tracks the latest step. Merge in order; GitHub retargets the next PR when the base branch is deleted.
 - The PR title and description for each step live in `docs/prs/0N-*.md` on that step's branch.
 - Node 22 is required (better-sqlite3 13, vitest 5). WAL mode is off on purpose; it failed on the user's macOS temp dir.
-- `ANTHROPIC_API_KEY` goes in `.env`. **No live model run has happened yet**; every test uses `src/llm/fake.ts`.
+- `ANTHROPIC_API_KEY` goes in `.env`. The first live run (22 Nov, Opus 5.5) scored 13/13 right, 0 stale, 0 false recall, $0.12 per full replay. Its one finding, pasted content kept in the raw transcript, is fixed in step 8 (`step-8-live-fixes`).
 
 ## Next
 
-1. Live run: `npm run harness -- --runs 1`. Read the verdicts. Expect prompt tuning on scenarios 3 (allergy phrasing in the dinner answer), 7 (classifier must put "sister" in roles) and 8 (classifier must not route "trips" to location only). Tune `src/llm/prompts.ts`, never the code rules.
-2. Cost: `npm run cli -- cost` after a run. If extraction dominates, set `EXTRACT_MODEL=claude-haiku-5-5` in `.env` and compare. That decision is the user's.
+1. Re-run `npm run harness -- --runs 3` on step 8 and confirm leak 0 with the median.
+2. Cost is already low ($0.12 per replay on Opus). Extraction is about 60 percent of it; `EXTRACT_MODEL=claude-haiku-5-5` is an option if the day's budget is tight, but Opus answers were precise and verbatim, so the default stays.
 3. Record the 2-minute demo from the README script.
+4. On the day: read their harness first, write the adapter, then rebuild in this order: vocab and ledger, taint and extraction with the exact-wording check, forget with audit, closed-world ask, anchors and rules, transcript scrubbing.
 
 ## Conventions
 

@@ -55,6 +55,10 @@ export class TurnsRepo {
     return rows.map((row) => ({ idx: row.idx, startedAt: row.started_at }));
   }
 
+  hasSession(idx: number): boolean {
+    return this.db.prepare('SELECT 1 FROM sessions WHERE idx = ?').get(idx) !== undefined;
+  }
+
   latestSession(): number | undefined {
     const row = this.db.prepare('SELECT max(idx) AS idx FROM sessions').get() as { idx: number | null };
     return row.idx ?? undefined;

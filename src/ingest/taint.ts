@@ -28,6 +28,18 @@ export function splitTurn(turnIndex: number, text: string): SplitResult {
   return result;
 }
 
+// The text that is safe to persist: clean paragraphs kept, each tainted paragraph replaced by a marker.
+export function storableText(text: string): string {
+  const parts: string[] = [];
+  let poisonedBy: TaintReason | undefined;
+  for (const paragraph of paragraphs(text)) {
+    const reason = poisonedBy ?? taintReason(paragraph);
+    if (reason === 'fence' || reason === 'forwarded') poisonedBy = reason;
+    parts.push(reason === undefined ? paragraph : `[pasted content removed: ${reason}]`);
+  }
+  return parts.join('\n\n');
+}
+
 export function taintReason(paragraph: string): TaintReason | undefined {
   if (FENCE.test(paragraph)) return 'fence';
   if (FORWARDED.test(paragraph)) return 'forwarded';

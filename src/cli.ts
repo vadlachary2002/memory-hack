@@ -53,7 +53,10 @@ async function main(args: readonly string[]): Promise<void> {
       const sessions = SessionsFileSchema.parse(JSON.parse(readFileSync(arg, 'utf8'))).filter(
         (session) => until === undefined || session.index <= until,
       );
+      const skipped = sessions.filter((session) => memory.hasSession(session.index)).map((session) => session.index);
+      if (skipped.length > 0) console.log(`skipping ${skipped.length} session(s) already ingested: s${skipped[0]}..s${skipped[skipped.length - 1]}`);
       for (const session of sessions) {
+        if (memory.hasSession(session.index)) continue;
         const report = await memory.ingest(session);
         const rejected = report.rejected.map((item) => `${item.reason}: ${item.candidate}`).join('; ');
         console.log(
