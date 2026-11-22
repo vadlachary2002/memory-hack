@@ -1,8 +1,8 @@
-# PR 2 title
+# PR title
 
 Step 3: forget with physical erase, strip, redaction and self-audit
 
-# PR 2 description
+# PR description
 
 ## What this PR builds
 
@@ -20,7 +20,8 @@ Step 3: forget with physical erase, strip, redaction and self-audit
 3. `src/ingest/resolve.ts`: `markFormer` and `markSupersededFormer`. When a relational fact closes or is superseded, the person's role becomes "former X". This is what lets "my ex" and "my old manager" resolve without storing those words anywhere.
 4. `src/db/connection.ts`: `PRAGMA secure_delete` so freed pages are zeroed on disk.
 5. `src/db/*.repo.ts`: `eraseByIds`, `rewriteText`, `redactByIds`, `erase`, `allByRole`.
-6. `tests/forget.test.ts`: forget my ex end to end, idempotence, by name, by relation words, ambiguity, unknown person, by predicate, by domain, and the deletion invariant test that walks every text column.
+6. `tests/forget.test.ts`: forget my ex end to end, idempotence, by name, by relation words, ambiguity, unknown person, by predicate, by domain, and the deletion invariant test that walks every text column. 53 tests in total.
+7. `docs/handoff.md`: status, conventions and the remaining steps for whoever picks this up next.
 
 ## Update versus forget, for the judges
 
@@ -41,7 +42,3 @@ npm run cli -- forget "my ex"
 npm run cli -- audit Priya       # PASS after
 npm run cli -- facts
 ```
-
-## Not in this PR
-
-Closed-world answering (step 4), temporal anchors and the manager rule (step 5), the harness (step 6), adapters (step 7).

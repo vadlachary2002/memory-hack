@@ -5,8 +5,8 @@ Read this first, then `docs/plan.md`. Everything below was true on 22 Nov 2026.
 ## Where things stand
 
 - Steps 1, 2, 3 of 7 are built and pushed. 53 unit tests, no API key needed. See README for commands.
-- Branches: `steps-1-2` (PR #2 into main), `step-3-forget` (PR #3 into steps-1-2), `main-hi6j98` (working branch, same tip as step-3-forget). PR #1 is a duplicate and should be closed.
-- Each step gets its own branch and PR, based on the previous step's branch so the PR shows only that step. The PR title and description live in `docs/prs/0N-*.md` in the same commit; the user pastes them into GitHub.
+- Branches, one per step, each based on the previous: `step-1-ledger` (PR into main), `step-2-ingest` (PR into step-1-ledger), `step-3-forget` (PR into step-2-ingest). `main-hi6j98` is the cloud working branch and tracks the latest step. Merge in order; GitHub retargets the next PR when the base branch is deleted.
+- The PR title and description for each step live in `docs/prs/0N-*.md` on that step's branch.
 - Node 22 is required (better-sqlite3 13, vitest 5). WAL mode is off on purpose; it failed on the user's macOS temp dir.
 - `ANTHROPIC_API_KEY` goes in `.env`. No live model run has happened yet; every test uses `src/llm/fake.ts`.
 
