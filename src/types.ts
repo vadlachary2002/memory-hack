@@ -53,6 +53,8 @@ export const AnswerSchema = z.object({
   abstained: z.boolean(),
   candidates: z.array(z.number().int()),
   domains: z.array(DomainSchema),
+  // The session the answer is as of, when a cutoff or a time anchor applied.
+  asOf: z.number().int().optional(),
   cost: z.number(),
 });
 

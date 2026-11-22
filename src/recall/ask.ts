@@ -8,6 +8,7 @@ import type { LlmClient } from '../llm/client.js';
 import type { Answer } from '../types.js';
 import { answer, NO_INFO, UNKNOWN } from './answer.js';
 import { classify } from './classify.js';
+import { derivationRules } from './rules.js';
 import { select } from './select.js';
 
 export type AskRepos = { facts: FactsRepo; entities: EntitiesRepo; turns: TurnsRepo; calls: CallsRepo };
@@ -20,12 +21,13 @@ export async function ask(repos: AskRepos, client: LlmClient, question: string, 
   let cost = repos.calls.record('classify', classifyUsage, sessionIdx);
 
   const selection = select(repos, classification, opts.asOf);
-  const base = { domains: classification.domains, candidates: selection.candidates.map((fact) => fact.id) };
+  const base = { domains: classification.domains, candidates: selection.candidates.map((fact) => fact.id), asOf: selection.asOf };
   if (selection.abstain !== undefined) return { ...base, text: UNKNOWN, cited: [], abstained: true, cost };
   if (selection.candidates.length === 0) return { ...base, text: NO_INFO, cited: [], abstained: true, cost };
 
   const nameOf = (id: number): string => repos.entities.nameOf(id);
-  const generated = await answer(client, question, selection.candidates, nameOf);
+  const rules = derivationRules(repos.facts, repos.entities.ensureUser(), classification.domains, selection.asOf);
+  const generated = await answer(client, question, selection.candidates, nameOf, rules);
   cost += repos.calls.record('answer', generated.usage, sessionIdx);
   return { ...base, text: generated.text, cited: generated.cited, abstained: false, cost };
 }
