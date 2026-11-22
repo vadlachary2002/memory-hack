@@ -7,20 +7,23 @@ import { roleFor } from '../roles.js';
 import { reachableDomains } from '../vocab.js';
 import type { Classification } from './classify.js';
 
-export type AbstainReason = 'unknown_name' | 'unknown_role';
+export type AbstainReason = 'unknown_name' | 'unknown_role' | 'unknown_anchor';
 
 export type Selection = {
   candidates: FactRow[];
-  // Set when the question names someone or some role the ledger has never seen.
+  // Set when the question names someone, some role, or some event the ledger has never seen.
   abstain?: AbstainReason;
   entityIds: number[];
+  // The session the question is answered as of; set by the caller or resolved from a time anchor.
   asOf?: number;
+  anchorId?: number;
 };
 
 export type SelectRepos = { facts: FactsRepo; entities: EntitiesRepo };
 
-export function select(repos: SelectRepos, classification: Classification, asOf?: number): Selection {
+export function select(repos: SelectRepos, classification: Classification, asOfInput?: number): Selection {
   const entityIds: number[] = [];
+  let asOf = asOfInput;
 
   // Closed world: every name and every role must resolve, or we answer nothing.
   for (const name of classification.names) {
@@ -34,8 +37,16 @@ export function select(repos: SelectRepos, classification: Classification, asOf?
     for (const row of rows) entityIds.push(row.id);
   }
 
+  // Time anchor: "when I got Bruno" becomes the session the adopted_pet fact started.
+  const anchor = classification.timeAnchor === null ? undefined : findAnchor(repos, classification.timeAnchor);
+  if (classification.timeAnchor !== null && anchor === undefined) {
+    return { candidates: [], abstain: 'unknown_anchor', entityIds, asOf };
+  }
+  if (anchor !== undefined) asOf = anchor.validFrom;
+
   // Domain candidates come from one hop of adjacency; entity candidates from direct mentions.
   const byId = new Map<number, FactRow>();
+  if (anchor !== undefined) byId.set(anchor.id, anchor);
   for (const fact of repos.facts.byDomains(reachableDomains(classification.domains), asOf)) byId.set(fact.id, fact);
   for (const id of new Set(entityIds)) {
     for (const fact of repos.facts.byEntity(id)) {
@@ -46,7 +57,22 @@ export function select(repos: SelectRepos, classification: Classification, asOf?
   const candidates = [...byId.values()]
     .sort((a, b) => b.validFrom - a.validFrom || b.id - a.id)
     .slice(0, MAX_CANDIDATES);
-  return { candidates, entityIds: [...new Set(entityIds)], asOf };
+  return { candidates, entityIds: [...new Set(entityIds)], asOf, anchorId: anchor?.id };
+}
+
+// The anchor fact: same predicate, object text or entity name containing the anchor's object.
+function findAnchor(repos: SelectRepos, anchor: NonNullable<Classification['timeAnchor']>): FactRow | undefined {
+  const needle = anchor.object.trim().toLowerCase();
+  const matches = repos.facts
+    .all()
+    .filter((fact) => fact.predicate === anchor.predicate)
+    .filter((fact) => {
+      const object = (fact.objectText ?? '').toLowerCase();
+      const name = fact.objectEntityId === null ? '' : repos.entities.nameOf(fact.objectEntityId).toLowerCase();
+      return needle === '' || object.includes(needle) || name.includes(needle);
+    })
+    .sort((a, b) => a.validFrom - b.validFrom);
+  return matches[0];
 }
 
 // Entity-matched facts may be closed (the question named the person), but must exist at asOf.
