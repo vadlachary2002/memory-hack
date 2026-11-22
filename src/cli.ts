@@ -15,6 +15,7 @@ const USAGE = `usage:
   cli load <fixture.json>              replay a hand-written fact fixture (no model)
   cli ingest <sessions.json> [--until N]  ingest sessions through extraction (model call per session)
   cli facts                            list every fact row, erased included
+  cli ask "<question>" [--at N]        answer from memory as of session N (two model calls at most)
   cli summary [session]                render the profile, or one session
   cli forget "<name or relation>"     erase a person (name, alias, or words like "my ex") and self-audit
   cli audit "<name>"                   scan every text column for a name; passes when nothing is found
@@ -57,6 +58,16 @@ async function main(args: readonly string[]): Promise<void> {
             (rejected === '' ? '' : `\n  rejected ${rejected}`),
         );
       }
+      return;
+    }
+    case 'ask': {
+      if (arg === undefined) return fail('ask needs a question');
+      const asOf = optionValue(rest, '--at');
+      const result = await memory.ask(arg, asOf === undefined ? {} : { asOf });
+      console.log(result.text);
+      console.log(
+        `  domains ${result.domains.join(',')}  candidates ${result.candidates.length}  cited ${result.cited.map((id) => `f${id}`).join(',') || '-'}  ${result.abstained ? 'abstained' : 'answered'}  $${result.cost.toFixed(4)}`,
+      );
       return;
     }
     case 'facts': {

@@ -4,7 +4,7 @@
 import type { EntitiesRepo, EntityRow } from '../db/entities.repo.js';
 import type { FactRow, FactsRepo } from '../db/facts.repo.js';
 import type { TurnsRepo } from '../db/turns.repo.js';
-import { FORMER } from '../ingest/resolve.js';
+import { roleFor, stripLeading } from '../roles.js';
 import type { AuditReport, ForgetReport, ForgetTarget } from '../types.js';
 import { PREDICATES } from '../vocab.js';
 import { cleanNeedles, containsName, redactNames } from './names.js';
@@ -12,50 +12,6 @@ import { cleanNeedles, containsName, redactNames } from './names.js';
 export type ForgetRepos = { facts: FactsRepo; entities: EntitiesRepo; turns: TurnsRepo };
 
 export type ForgetContext = ForgetRepos & { summarise: () => string; atSession: number };
-
-// Everyday words for a relationship, mapped to the role stored on the entity.
-const ROLE_SYNONYMS: Record<string, string> = {
-  ex: `${FORMER}partner`,
-  'ex-partner': `${FORMER}partner`,
-  'ex-girlfriend': `${FORMER}partner`,
-  'ex-boyfriend': `${FORMER}partner`,
-  'ex-wife': `${FORMER}partner`,
-  'ex-husband': `${FORMER}partner`,
-  'former partner': `${FORMER}partner`,
-  partner: 'partner',
-  wife: 'partner',
-  husband: 'partner',
-  spouse: 'partner',
-  girlfriend: 'partner',
-  boyfriend: 'partner',
-  manager: 'manager',
-  boss: 'manager',
-  'ex-manager': `${FORMER}manager`,
-  'ex-boss': `${FORMER}manager`,
-  'old manager': `${FORMER}manager`,
-  'previous manager': `${FORMER}manager`,
-  'former manager': `${FORMER}manager`,
-  friend: 'friend',
-  'ex-friend': `${FORMER}friend`,
-  'former friend': `${FORMER}friend`,
-  sibling: 'sibling',
-  sister: 'sibling',
-  brother: 'sibling',
-  parent: 'parent',
-  mother: 'parent',
-  father: 'parent',
-  mom: 'parent',
-  dad: 'parent',
-  child: 'child',
-  son: 'child',
-  daughter: 'child',
-  kid: 'child',
-  pet: 'pet',
-  dog: 'pet',
-  cat: 'pet',
-};
-
-const LEADING_WORDS = /^(please\s+)?(forget\s+)?(everything\s+|all\s+)?(about\s+)?(my\s+)?/i;
 
 export function forget(ctx: ForgetContext, target: ForgetTarget): ForgetReport {
   switch (target.kind) {
@@ -70,12 +26,11 @@ export function forget(ctx: ForgetContext, target: ForgetTarget): ForgetReport {
 
 // Resolve a name, alias, or relationship word to entities. Several matches mean ambiguity.
 export function resolveEntities(entities: EntitiesRepo, ref: string): EntityRow[] {
-  const cleaned = ref.trim().replace(LEADING_WORDS, '').trim();
+  const cleaned = stripLeading(ref);
   if (cleaned === '') return [];
   const byName = entities.byName(cleaned);
   if (byName) return [byName];
-  const role = ROLE_SYNONYMS[cleaned.toLowerCase()] ?? cleaned.toLowerCase();
-  return entities.allByRole(role);
+  return entities.allByRole(roleFor(cleaned));
 }
 
 // Scan every text column and the rendered summary for the needles. Ids only.

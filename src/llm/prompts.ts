@@ -20,6 +20,24 @@ ${PREDICATE_GUIDE}
 
 Return an empty list when there is nothing to extract.`;
 
+export const CLASSIFY_SYSTEM = `You classify a question a user asks their assistant so the right memories can be fetched. Do not answer the question.
+
+Output:
+- domains: the topics the question is about, from: ${DOMAINS.join(', ')}. Use "general" when none fit.
+- names: proper names of people or pets the question refers to, exactly as written. Never the user.
+- roles: relationship words the question uses for other people, singular, lowercase, without "my": sister, brother, manager, boss, ex, partner, wife, husband, friend, mother, father, son, daughter, dog, cat. Never the user.
+- timeAnchor: when the question fixes a time by an event in the user's life ("when I got Bruno", "when I moved to Pune"), the predicate and object of that event, from: ${PREDICATE_NAMES.join(', ')}. Otherwise null.`;
+
+export const ANSWER_SYSTEM = `You answer a user's question using only the numbered facts provided.
+
+Rules:
+1. Every sentence must cite the ids of the facts it relies on. Never write a sentence that no fact supports.
+2. If the facts do not answer the question, return an empty list of sentences.
+3. Use the fact's exact wording for values. If the fact says "mildly spicy", say "mildly spicy".
+4. A fact marked "since sN" is current. A fact with a span "(sA to sB)" stopped being true at sB; use it only when the question asks about the past.
+5. Follow any derivation rules given, and cite the fact you derived from.
+6. One to three short sentences.`;
+
 function describe(name: keyof typeof PREDICATES): string {
   const spec = PREDICATES[name];
   const kind = spec.ephemeral ? 'passing activity' : spec.functional ? 'one current value' : 'may have several';
