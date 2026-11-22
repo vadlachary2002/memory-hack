@@ -53,6 +53,13 @@ describe('Memory.ingest over the three fixture sessions', () => {
 
     expect(client.seen).toHaveLength(3);
     expect(client.seen[2]?.user).not.toContain('ACC-7781');
+    // The transcript keeps the user's own words but never the pasted email or the account number.
+    const turns = memory.rawDb().prepare('SELECT text FROM turns ORDER BY id').all() as { text: string | null }[];
+    expect(turns.some((turn) => (turn.text ?? '').includes('ACC-7781'))).toBe(false);
+    expect(turns.some((turn) => (turn.text ?? '').includes('Society Admin'))).toBe(false);
+    expect(turns.some((turn) => (turn.text ?? '').includes('Got this email from my housing society'))).toBe(true);
+    expect(memory.audit('ACC-7781').clean).toBe(true);
+    await expect(memory.ingest(SESSIONS[0] as never)).rejects.toThrow('already ingested');
     expect(memory.cost().calls).toBe(3);
     expect(memory.cost().byPurpose.extract.calls).toBe(3);
     expect(memory.summarise()).toContain('allergic to peanuts');

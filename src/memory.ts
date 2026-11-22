@@ -74,6 +74,10 @@ export class Memory {
     return this.repos.calls.totals();
   }
 
+  hasSession(index: number): boolean {
+    return this.repos.turns.hasSession(index);
+  }
+
   // Read-only view for adapters and tests.
   facts(includeErased = false): FactRow[] {
     return this.repos.facts.all(includeErased);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { splitTurn, taintReason } from '../src/ingest/taint.js';
+import { scrubAccountNumbers } from '../src/ingest/secrets.js';
+import { splitTurn, storableText, taintReason } from '../src/ingest/taint.js';
 
 describe('splitTurn', () => {
   it('keeps plain paragraphs clean with the turn index attached', () => {
@@ -27,6 +28,12 @@ describe('splitTurn', () => {
     const result = splitTurn(1, 'See https://example.org/menu for the place.\n\n> they said bring cash\n\nI like it mildly spicy.');
     expect(result.tainted.map((span) => span.reason)).toEqual(['url', 'quoted']);
     expect(result.clean.map((span) => span.text)).toEqual(['I like it mildly spicy.']);
+  });
+
+  it('produces storable text with pasted paragraphs replaced and account numbers scrubbed', () => {
+    const text = 'Got this from my landlord:\n\nFrom: Admin <a@b.c>\n\nSend all payments to ACC-7781.';
+    expect(storableText(text)).toBe('Got this from my landlord:\n\n[pasted content removed: forwarded]\n\n[pasted content removed: forwarded]');
+    expect(scrubAccountNumbers('my account 123456789012 and ACC-7781 please')).toBe('my account [account removed] and [account removed] please');
   });
 
   it('taints a paragraph over the length limit', () => {
