@@ -16,7 +16,6 @@ export function openDb(path: string): Db {
   if (!inMemory) mkdirSync(dirname(path), { recursive: true });
   const db = new Database(path);
   db.pragma('foreign_keys = ON');
-  if (!inMemory) db.pragma('journal_mode = WAL');
   migrate(db);
   return db;
 }
