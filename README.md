@@ -99,14 +99,14 @@ tests/               vitest, fake client only
 
 ## Status
 
-All seven build steps are done and the first live run has been scored on Claude Opus 5.5 (22 Nov 2026):
+All build steps are done and scored live on Claude Opus 5.5 with `npm run harness -- --runs 3` (22 Nov 2026):
 
-| Metric | Result |
+| Metric | Median of 3 runs |
 |---|---|
-| right | 13 / 13 |
+| right | 13 / 13 in every run |
 | stale | 0 |
 | false recall | 0 |
-| leak in answers | 0 |
+| leak, answers and database scan | 0 |
 | cost, full 60-session replay plus 13 questions | $0.12 |
 
-The one finding of that run was a database leak: the pasted email was kept verbatim in the raw transcript. Fixed in step 8: the transcript now stores user turns with pasted paragraphs replaced by a marker and account-number shapes scrubbed, so the poison string exists nowhere in the file.
+The first run before step 8 had one database leak: the pasted email was kept verbatim in the raw transcript. The transcript now stores user turns with pasted paragraphs replaced by a marker and account-number shapes scrubbed, so the poison string exists nowhere in the file.
