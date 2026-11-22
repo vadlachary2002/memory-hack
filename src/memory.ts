@@ -1,5 +1,6 @@
 // The library. Adapters (CLI, HTTP, batch) call only this class.
 
+import { dbPathForUser } from './config.js';
 import { CallsRepo, type CostReport } from './db/calls.repo.js';
 import { openDb, resetDb, type Db } from './db/connection.js';
 import { EntitiesRepo } from './db/entities.repo.js';
@@ -13,6 +14,11 @@ import type { Answer, ForgetReport, ForgetTarget, IngestReport, SessionInput } f
 export type MemoryOptions = { dbPath: string; llm: LlmClient };
 
 export class Memory {
+  // Multi-tenant entry point: each user id gets its own database file.
+  static forUser(userId: string, llm: LlmClient, dir?: string): Memory {
+    return new Memory({ dbPath: dbPathForUser(userId, dir), llm });
+  }
+
   private readonly db: Db;
   private readonly repos: Repos;
 

@@ -104,6 +104,8 @@ type ForgetReport = {
 
 Rule: no names in `ForgetReport`, ids only. Rule: `summarise` never calls the model.
 
+Tenancy: one database file per user. `Memory.forUser(userId, llm)` maps a sanitised user id to `data/users/<id>.db`. Isolation is a file boundary, so no query needs a user filter and cross-user leakage is impossible by construction. If the harness passes a user id, the adapter calls `forUser`; if it does not, the single default file is used.
+
 ## 5. Adapters (how the outside world reaches the library)
 
 The scoring harness interface is unknown until 10:00 on the day. Every plausible shape is one small file over the same `Memory` class.
