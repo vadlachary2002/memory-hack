@@ -2,10 +2,9 @@
 
 import type { EntitiesRepo, EntityType } from '../db/entities.repo.js';
 import type { FactsRepo } from '../db/facts.repo.js';
+import { FORMER, GENERIC_OF, specificRolesIn } from '../roles.js';
 import { PREDICATES, type Predicate } from '../vocab.js';
 import type { Candidate } from './extract.js';
-
-export const FORMER = 'former ';
 
 // The role the object entity gets, as seen from the user.
 export const ROLE_OF: Partial<Record<Predicate, string>> = {
@@ -20,13 +19,19 @@ export const ROLE_OF: Partial<Record<Predicate, string>> = {
 };
 
 // Returns the entity id when the candidate's object is a person or pet, else undefined.
-export function resolveObject(entities: EntitiesRepo, candidate: Candidate, sessionIdx: number): number | undefined {
+// context is the user's own text around the statement; it reveals specific roles ("kitten", "brother").
+export function resolveObject(entities: EntitiesRepo, candidate: Candidate, sessionIdx: number, context = ''): number | undefined {
   const spec = PREDICATES[candidate.predicate];
   if (!spec.relational && !candidate.objectIsEntity) return undefined;
   const type: EntityType = candidate.entityType ?? (candidate.predicate === 'adopted_pet' ? 'pet' : 'person');
   const role = ROLE_OF[candidate.predicate];
   // Pets always carry the "pet" role, whatever predicate introduced them.
-  const roles = [...(role === undefined ? [] : [role]), ...(type === 'pet' ? ['pet'] : [])];
+  const generic = role ?? (type === 'pet' ? 'pet' : undefined);
+  const roles = [
+    ...(role === undefined ? [] : [role]),
+    ...(type === 'pet' ? ['pet'] : []),
+    ...specificRolesIn(`${candidate.quote} ${context}`, generic),
+  ];
   const row = entities.upsert({
     name: candidate.object,
     type,
@@ -53,11 +58,14 @@ export function markSupersededFormer(
   }
 }
 
-// When a relational fact closes, the entity's role for that predicate becomes "former <role>".
+// When a relational fact closes, every role of that category becomes "former <role>":
+// partner and girlfriend both become former partner and former girlfriend.
 export function markFormer(entities: EntitiesRepo, entityId: number, predicate: Predicate): void {
   const role = ROLE_OF[predicate];
   const row = entities.byId(entityId);
   if (role === undefined || row === undefined) return;
-  const roles = row.roles.filter((value) => value.toLowerCase() !== role).concat(`${FORMER}${role}`);
-  entities.setRoles(entityId, roles);
+  const inCategory = (value: string): boolean => value === role || GENERIC_OF[value] === role;
+  const kept = row.roles.filter((value) => !inCategory(value.toLowerCase()));
+  const former = row.roles.filter((value) => inCategory(value.toLowerCase())).map((value) => `${FORMER}${value.toLowerCase()}`);
+  entities.setRoles(entityId, [...kept, ...(former.length === 0 ? [`${FORMER}${role}`] : former)]);
 }

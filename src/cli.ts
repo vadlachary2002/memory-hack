@@ -15,6 +15,7 @@ const USAGE = `usage:
   cli reset                            drop and recreate the database
   cli load <fixture.json>              replay a hand-written fact fixture (no model)
   cli ingest <sessions.json> [--until N]  ingest sessions through extraction (model call per session)
+  cli say "<message>"                  send one chat message as a new session (model call)
   cli facts                            list every fact row, erased included
   cli ask "<question>" [--at N]        answer from memory as of session N (two model calls at most)
   cli summary [session]                render the profile, or one session
@@ -68,6 +69,17 @@ async function main(args: readonly string[]): Promise<void> {
             (forgotten === '' ? '' : `\n  FORGET ${forgotten}`),
         );
       }
+      return;
+    }
+    case 'say': {
+      if (arg === undefined) return fail('say needs a message');
+      const index = memory.latestSession() + 1;
+      const report = await memory.ingest({ index, turns: [{ role: 'user', text: arg }] });
+      const facts = report.stored.map((id) => memory.facts(true).find((fact) => fact.id === id)).filter((fact) => fact !== undefined);
+      console.log(`s${index}: stored ${report.stored.length}, superseded ${report.superseded.length}, tainted ${report.tainted}, forgotten ${report.forgotten.length}, cost $${report.cost.toFixed(4)}`);
+      for (const fact of facts) console.log(`  + ${renderLine(fact, nameOf)}`);
+      for (const item of report.rejected) console.log(`  rejected ${item.reason}: ${item.candidate}`);
+      for (const item of report.forgotten) console.log(`  FORGET entities ${item.entityIds.join(',') || '-'} erased ${item.erasedFacts.length} scan ${item.scanClean ? 'clean' : 'HITS'}`);
       return;
     }
     case 'ask': {

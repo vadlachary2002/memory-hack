@@ -1,8 +1,43 @@
 // The lexicon that turns everyday words into roles and categories.
 // Shared by forget (resolve "my ex"), recall (closed-world check on "my sister", anchors on "that dog").
 
-import { FORMER } from './ingest/resolve.js';
 import type { Predicate } from './vocab.js';
+
+// Prefix on a role once the relationship has ended: "former partner".
+export const FORMER = 'former ';
+
+// Specific roles: a word that names a kind within a category. "dog" is a pet, but only a dog is a dog.
+// Entities get these from the words around them at ingest; a question word matches only its own kind.
+export const GENERIC_OF: Record<string, string> = {
+  dog: 'pet',
+  cat: 'pet',
+  wife: 'partner',
+  husband: 'partner',
+  girlfriend: 'partner',
+  boyfriend: 'partner',
+  sister: 'sibling',
+  brother: 'sibling',
+  mother: 'parent',
+  father: 'parent',
+  son: 'child',
+  daughter: 'child',
+};
+
+// Words in a turn that reveal a specific role for the entity being stored.
+export const SPECIFIC_ROLE_WORDS: Record<string, RegExp> = {
+  dog: /\b(dog|puppy|pup|beagle|labrador|retriever|husky|pug|indie)\b/i,
+  cat: /\b(cat|kitten|kitty)\b/i,
+  wife: /\b(wife)\b/i,
+  husband: /\b(husband)\b/i,
+  girlfriend: /\b(girlfriend|gf)\b/i,
+  boyfriend: /\b(boyfriend|bf)\b/i,
+  sister: /\b(sister|sis)\b/i,
+  brother: /\b(brother|bro)\b/i,
+  mother: /\b(mother|mom|mum|amma|ma)\b/i,
+  father: /\b(father|dad|appa|papa)\b/i,
+  son: /\b(son)\b/i,
+  daughter: /\b(daughter)\b/i,
+};
 
 const ROLE_SYNONYMS: Record<string, string> = {
   // partners
@@ -15,11 +50,13 @@ const ROLE_SYNONYMS: Record<string, string> = {
   'former partner': `${FORMER}partner`,
   'old partner': `${FORMER}partner`,
   partner: 'partner',
-  wife: 'partner',
-  husband: 'partner',
+  wife: 'wife',
+  husband: 'husband',
   spouse: 'partner',
-  girlfriend: 'partner',
-  boyfriend: 'partner',
+  girlfriend: 'girlfriend',
+  boyfriend: 'boyfriend',
+  gf: 'girlfriend',
+  bf: 'boyfriend',
   fiance: 'partner',
   fiancee: 'partner',
   'significant other': 'partner',
@@ -49,33 +86,49 @@ const ROLE_SYNONYMS: Record<string, string> = {
   'old friend': 'friend',
   // family
   sibling: 'sibling',
-  sister: 'sibling',
-  brother: 'sibling',
-  sis: 'sibling',
-  bro: 'sibling',
+  sister: 'sister',
+  brother: 'brother',
+  sis: 'sister',
+  bro: 'brother',
   parent: 'parent',
-  mother: 'parent',
-  father: 'parent',
-  mom: 'parent',
-  mum: 'parent',
-  dad: 'parent',
-  amma: 'parent',
-  appa: 'parent',
+  mother: 'mother',
+  father: 'father',
+  mom: 'mother',
+  mum: 'mother',
+  dad: 'father',
+  amma: 'mother',
+  appa: 'father',
   child: 'child',
-  son: 'child',
-  daughter: 'child',
+  son: 'son',
+  daughter: 'daughter',
   kid: 'child',
   baby: 'child',
   // pets
   pet: 'pet',
-  dog: 'pet',
-  cat: 'pet',
-  puppy: 'pet',
-  kitten: 'pet',
-  pup: 'pet',
+  dog: 'dog',
+  cat: 'cat',
+  puppy: 'dog',
+  pup: 'dog',
+  beagle: 'dog',
+  kitten: 'cat',
+  kitty: 'cat',
   animal: 'pet',
-  beagle: 'pet',
 };
+
+// Specific roles implied by the words around an entity, limited to the category its predicate gives.
+export function specificRolesIn(text: string, generic: string | undefined): string[] {
+  if (generic === undefined) return [];
+  return Object.entries(SPECIFIC_ROLE_WORDS)
+    .filter(([role, pattern]) => GENERIC_OF[role] === generic && pattern.test(text))
+    .map(([role]) => role);
+}
+
+// Past markers in a question mean former holders of a role are wanted too: "who was my old boss".
+const PAST_MARKER = /\b(old|former|previous|prior|ex|earlier|before|first|was|were|used to)\b/i;
+
+export function asksAboutPast(question: string): boolean {
+  return PAST_MARKER.test(question);
+}
 
 // Generic words that stand for "the thing this predicate is about": "when I got the dog".
 const GENERIC_OBJECTS: Partial<Record<Predicate, readonly string[]>> = {
@@ -114,7 +167,9 @@ export function isRoleWord(word: string): boolean {
 export function isGenericObject(predicate: Predicate, word: string): boolean {
   const cleaned = normaliseRef(word);
   if (cleaned === '') return true;
-  return (GENERIC_OBJECTS[predicate] ?? []).includes(cleaned) || ROLE_SYNONYMS[cleaned] === roleOfPredicate(predicate);
+  const role = ROLE_SYNONYMS[cleaned];
+  const generic = role === undefined ? undefined : (GENERIC_OF[role] ?? role);
+  return (GENERIC_OBJECTS[predicate] ?? []).includes(cleaned) || generic === roleOfPredicate(predicate);
 }
 
 // Lowercase, leading articles and "my" removed, trailing possessive removed.

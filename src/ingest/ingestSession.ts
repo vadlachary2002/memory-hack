@@ -51,7 +51,8 @@ export async function ingestSession(repos: Repos, client: LlmClient, input: Sess
     for (const candidate of extracted.accepted) {
       const turnId = turnIds.get(candidate.turnIndex);
       if (turnId === undefined) continue;
-      const objectEntityId = resolveObject(repos.entities, candidate, session.index);
+      const context = clean.filter((span) => span.turnIndex === candidate.turnIndex).map((span) => span.text).join(' ');
+      const objectEntityId = resolveObject(repos.entities, candidate, session.index, context);
       const outcome = storeCandidate(repos.facts, repos.entities, userId, candidate, objectEntityId, turnId, session.index);
       switch (outcome.kind) {
         case 'stored':

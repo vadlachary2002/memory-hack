@@ -78,6 +78,10 @@ export class Memory {
     return this.repos.turns.hasSession(index);
   }
 
+  latestSession(): number {
+    return this.repos.turns.latestSession() ?? 0;
+  }
+
   // Read-only view for adapters and tests.
   facts(includeErased = false): FactRow[] {
     return this.repos.facts.all(includeErased);
