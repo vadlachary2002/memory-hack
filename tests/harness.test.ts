@@ -19,6 +19,8 @@ describe('detectForget', () => {
   it('finds the target of a forget request and ignores ordinary statements', () => {
     expect(detectForget('Please forget everything about my ex, completely.')).toEqual([{ kind: 'entity', name: 'my ex' }]);
     expect(detectForget('Delete Priya from your memory')).toEqual([{ kind: 'entity', name: 'Priya' }]);
+    expect(detectForget('Forget my ex completely, I do not want to hear about her again.')).toEqual([{ kind: 'entity', name: 'my ex' }]);
+    expect(detectForget('Please forget about Rahul and never bring him up')).toEqual([{ kind: 'entity', name: 'Rahul' }]);
     expect(detectForget('I forgot my umbrella at the office')).toEqual([]);
     expect(detectForget('Priya and I moved in together')).toEqual([]);
   });

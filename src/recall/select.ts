@@ -3,8 +3,7 @@
 import { MAX_CANDIDATES } from '../config.js';
 import type { EntitiesRepo, EntityRow } from '../db/entities.repo.js';
 import type { FactRow, FactsRepo } from '../db/facts.repo.js';
-import { FORMER } from '../ingest/resolve.js';
-import { isGenericObject, isRoleWord, normaliseRef, roleFor } from '../roles.js';
+import { FORMER, isGenericObject, isRoleWord, normaliseRef, roleFor } from '../roles.js';
 import { reachableDomains } from '../vocab.js';
 import type { Classification } from './classify.js';
 
@@ -22,9 +21,12 @@ export type Selection = {
 
 export type SelectRepos = { facts: FactsRepo; entities: EntitiesRepo };
 
-export function select(repos: SelectRepos, classification: Classification, asOfInput?: number): Selection {
+export type SelectOptions = { asOf?: number; includeFormer?: boolean };
+
+export function select(repos: SelectRepos, classification: Classification, options: SelectOptions = {}): Selection {
   const entityIds: number[] = [];
-  let asOf = asOfInput;
+  const includeFormer = options.includeFormer ?? false;
+  let asOf = options.asOf;
 
   // Closed world: every name and every role must resolve, or we answer nothing.
   // A "name" that is really a category word ("dog", "boss") is resolved as a role.
@@ -35,12 +37,12 @@ export function select(repos: SelectRepos, classification: Classification, asOfI
       continue;
     }
     if (!isRoleWord(name)) return { candidates: [], abstain: 'unknown_name', entityIds, asOf };
-    const rows = holdersOf(repos, roleFor(name));
+    const rows = holdersOf(repos, roleFor(name), includeFormer);
     if (rows.length === 0) return { candidates: [], abstain: 'unknown_name', entityIds, asOf };
     for (const row of rows) entityIds.push(row.id);
   }
   for (const role of classification.roles) {
-    const rows = holdersOf(repos, roleFor(role));
+    const rows = holdersOf(repos, roleFor(role), includeFormer);
     if (rows.length === 0) return { candidates: [], abstain: 'unknown_role', entityIds, asOf };
     for (const row of rows) entityIds.push(row.id);
   }
@@ -68,12 +70,16 @@ export function select(repos: SelectRepos, classification: Classification, asOfI
   return { candidates, entityIds: [...new Set(entityIds)], asOf, anchorId: anchor?.id };
 }
 
-// Current holders of a role; failing that, former holders, so "who is my partner" after a breakup
-// hands the closed fact to the answer step instead of abstaining.
-function holdersOf(repos: SelectRepos, role: string): EntityRow[] {
+// Current holders of a role, plus former holders when the question asks about the past or when
+// nobody holds the role now ("who is my partner" after a breakup hands the closed fact to the answer step).
+// A specific word matches only its own kind: "dog" never resolves to a cat.
+function holdersOf(repos: SelectRepos, role: string, includeFormer: boolean): EntityRow[] {
   const current = repos.entities.allByRole(role);
-  if (current.length > 0 || role.startsWith(FORMER)) return current;
-  return repos.entities.allByRole(`${FORMER}${role}`);
+  if (role.startsWith(FORMER)) return current;
+  if (current.length > 0 && !includeFormer) return current;
+  const former = repos.entities.allByRole(`${FORMER}${role}`);
+  const seen = new Set<number>();
+  return [...current, ...former].filter((row) => (seen.has(row.id) ? false : (seen.add(row.id), true)));
 }
 
 // The anchor fact: same predicate, matched by name, alias, or a generic word for the category

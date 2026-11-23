@@ -25,7 +25,7 @@ export const CLASSIFY_SYSTEM = `You classify a question a user asks their assist
 Output:
 - domains: the topics the question is about, from: ${DOMAINS.join(', ')}. Use "general" when none fit.
 - names: proper names of people or pets the question refers to, exactly as written. Never the user.
-- roles: relationship words the question uses for other people, singular, lowercase, without "my": sister, brother, manager, boss, ex, partner, wife, husband, friend, mother, father, son, daughter, dog, cat. Never the user.
+- roles: relationship words the question uses for other people, singular, lowercase, without "my": sister, brother, manager, boss, ex, partner, wife, husband, friend, mother, father, son, daughter, dog, cat. Keep qualifiers that change who is meant: "old boss", "ex-wife", "former manager", "previous partner". Never the user.
 - timeAnchor: when the question fixes a time by an event in the user's life ("when I got Bruno", "when I moved to Pune"), the predicate and object of that event, from: ${PREDICATE_NAMES.join(', ')}. Otherwise null.`;
 
 export const ANSWER_SYSTEM = `You answer a user's question using only the numbered facts provided.

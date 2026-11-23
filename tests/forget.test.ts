@@ -88,7 +88,7 @@ describe('forget by name and relation words', () => {
   });
 
   it('reports ambiguity instead of guessing when a role matches several people', () => {
-    new EntitiesRepo(memory.rawDb()).upsert({ name: 'Max', type: 'pet', roles: ['pet'] });
+    new EntitiesRepo(memory.rawDb()).upsert({ name: 'Max', type: 'pet', roles: ['pet', 'dog'] });
     const report = memory.forget({ kind: 'entity', name: 'my dog' });
     expect(report.entityIds).toHaveLength(2);
     expect(report.erasedFacts).toEqual([]);

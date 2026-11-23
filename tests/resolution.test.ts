@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { EntitiesRepo } from '../src/db/entities.repo.js';
 import { FixtureSchema, loadFixture } from '../src/fixture.js';
+import { markFormer, resolveObject } from '../src/ingest/resolve.js';
 import { FakeClient } from '../src/llm/fake.js';
 import { Memory } from '../src/memory.js';
 import { UNKNOWN } from '../src/recall/answer.js';
@@ -30,8 +32,9 @@ beforeEach(() => {
 
 describe('lexicon', () => {
   it('maps everyday words to roles and strips articles and possessives', () => {
-    expect(roleFor('that dog')).toBe('pet');
-    expect(roleFor('my puppy')).toBe('pet');
+    expect(roleFor('that dog')).toBe('dog');
+    expect(roleFor('my puppy')).toBe('dog');
+    expect(roleFor('my pet')).toBe('pet');
     expect(roleFor('the boss')).toBe('manager');
     expect(roleFor("my old boss")).toBe('former manager');
     expect(roleFor('fiancee')).toBe('partner');
@@ -115,6 +118,54 @@ describe('roles with only former holders', () => {
     client.enqueue('classify', classification({ domains: ['family'], roles: ['brother'] }));
     expect((await memory.ask('who is my brother')).text).toBe(UNKNOWN);
     expect(client.seen).toHaveLength(1);
+  });
+});
+
+describe('specific kinds within a category', () => {
+  it('"my dog" resolves Bruno but "my cat" abstains, and "my pet" reaches any pet', async () => {
+    const bruno = idOf('adopted_pet', 'Bruno');
+    client.enqueue('classify', classification({ domains: ['pets'], roles: ['dog'] }));
+    client.enqueue('answer', { sentences: [{ text: 'Bruno.', citedIds: [bruno] }] });
+    expect((await memory.ask('what is my dog called')).candidates).toContain(bruno);
+
+    client.enqueue('classify', classification({ domains: ['pets'], roles: ['cat'] }));
+    expect((await memory.ask('what is my cat called')).text).toBe(UNKNOWN);
+
+    client.enqueue('classify', classification({ domains: ['pets'], roles: ['pet'] }));
+    client.enqueue('answer', { sentences: [{ text: 'Bruno.', citedIds: [bruno] }] });
+    expect((await memory.ask('what is my pet called')).candidates).toContain(bruno);
+  });
+
+  it('entities pick up specific roles from the words around them, and keep them when the relationship ends', () => {
+    const entities = new EntitiesRepo(memory.rawDb());
+    const id = resolveObject(
+      entities,
+      { turnIndex: 1, predicate: 'partner_of', attrKey: null, object: 'Neha', quote: 'Neha is my girlfriend', objectIsEntity: true, entityType: 'person', aliases: [], domains: [], ended: false },
+      1,
+      'Neha is my girlfriend, we met in Pune.',
+    );
+    expect(entities.byId(id ?? -1)?.roles).toEqual(['partner', 'girlfriend']);
+    markFormer(entities, id ?? -1, 'partner_of');
+    expect(entities.byId(id ?? -1)?.roles).toEqual(['former partner', 'former girlfriend']);
+    expect(entities.allByRole('former girlfriend').map((row) => row.id)).toEqual([id]);
+    // "ex-girlfriend" maps to the category, so it also finds the fixture's former partner Priya.
+    expect(entities.allByRole(roleFor('ex-girlfriend')).map((row) => row.id)).toContain(id);
+  });
+
+  it('"who was my old boss" includes the former manager alongside the current one', async () => {
+    const arjun = idOf('reports_to', 'Arjun');
+    const meera = idOf('reports_to', 'Meera');
+    client.enqueue('classify', classification({ domains: ['work'], roles: ['boss'] }));
+    client.enqueue('answer', { sentences: [{ text: 'Arjun, before Meera.', citedIds: [arjun] }] });
+    const result = await memory.ask('who was my old boss');
+    expect(result.candidates).toContain(arjun);
+    expect(result.candidates).toContain(meera);
+
+    client.enqueue('classify', classification({ domains: ['work'], roles: ['boss'] }));
+    client.enqueue('answer', { sentences: [{ text: 'Meera.', citedIds: [meera] }] });
+    const now = await memory.ask('who is my boss');
+    expect(now.candidates).toContain(meera);
+    expect(now.candidates).not.toContain(arjun);
   });
 });
 
