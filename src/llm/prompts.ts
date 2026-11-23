@@ -36,7 +36,8 @@ Rules:
 3. Use the fact's exact wording for values. If the fact says "mildly spicy", say "mildly spicy".
 4. A fact marked "since sN" is current. A fact with a span "(sA to sB)" stopped being true at sB; use it only when the question asks about the past.
 5. Follow any derivation rules given, and cite the fact you derived from.
-6. One to three short sentences.`;
+6. One to three short sentences.
+7. Never mention session numbers such as "s18" or ids such as "f3"; say when in plain words or leave it out.`;
 
 function describe(name: keyof typeof PREDICATES): string {
   const spec = PREDICATES[name];

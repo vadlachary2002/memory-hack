@@ -4,7 +4,7 @@
 import type { EntitiesRepo, EntityRow } from '../db/entities.repo.js';
 import type { FactRow, FactsRepo } from '../db/facts.repo.js';
 import type { TurnsRepo } from '../db/turns.repo.js';
-import { roleFor, stripLeading } from '../roles.js';
+import { normaliseRef, roleFor, stripLeading } from '../roles.js';
 import type { AuditReport, ForgetReport, ForgetTarget } from '../types.js';
 import { PREDICATES } from '../vocab.js';
 import { cleanNeedles, containsName, redactNames } from './names.js';
@@ -28,7 +28,7 @@ export function forget(ctx: ForgetContext, target: ForgetTarget): ForgetReport {
 export function resolveEntities(entities: EntitiesRepo, ref: string): EntityRow[] {
   const cleaned = stripLeading(ref);
   if (cleaned === '') return [];
-  const byName = entities.byName(cleaned);
+  const byName = entities.byName(normaliseRef(cleaned)) ?? entities.byName(cleaned);
   if (byName) return [byName];
   return entities.allByRole(roleFor(cleaned));
 }
