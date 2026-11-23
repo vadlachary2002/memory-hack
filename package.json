@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "cli": "tsx src/cli.ts",
     "generate": "tsx harness/generate.ts",
-    "harness": "tsx harness/score.ts"
+    "harness": "tsx harness/score.ts",
+    "cases": "tsx harness/cases.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.137.0",

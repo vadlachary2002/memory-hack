@@ -30,7 +30,7 @@ TypeScript, Node 22, SQLite (better-sqlite3), Anthropic SDK behind a one-method 
 
 ```sh
 npm install                    # Node 22
-npm test                       # 85 unit tests, no API key needed
+npm test                       # 87 unit tests, no API key needed
 npm run cli -- reset
 npm run cli -- load fixtures/facts.json      # 46-session story, no model
 npm run cli -- facts
@@ -69,6 +69,15 @@ npm run harness -- --runs 3       # replays 60 sessions, grades 13 questions, pr
 ```
 
 Metrics: right, stale (a superseded value), false recall (an irrelevant or never-stated thing), leak (a deleted name or the poison string in any answer or anywhere in the database, a disqualifier), cost.
+
+## Scenario cases
+
+```sh
+npm run cases                      # twelve small conversations with phrasing variants, graded live, about 5 cents
+npm run cases -- --only partner    # a subset by id prefix
+```
+
+Cases live in `harness/cases.json` and need no code to extend: sessions, questions with what the answer must and must not contain, whether it must abstain, and which strings must be gone from the database after a forget. The unit tests prove the code rules with a fake model; the cases prove the phrasing with the real one.
 
 ## Adapters
 

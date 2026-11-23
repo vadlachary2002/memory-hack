@@ -11,7 +11,8 @@ const OUT_DIR = 'data/practice';
 export const QuestionSchema = z.object({
   id: z.string(),
   askAt: z.number().int().positive(),
-  scenario: z.string(),
+  // Scenario label for reports; scenario cases leave it to their case id.
+  scenario: z.string().default(''),
   question: z.string(),
   expectContains: z.array(z.string()),
   forbidContains: z.array(z.string()),
