@@ -101,6 +101,23 @@ describe('names that are really category words', () => {
   });
 });
 
+describe('roles with only former holders', () => {
+  it('"who is my partner" after the breakup hands the closed fact to the answer step', async () => {
+    const priya = idOf('partner_of', 'Priya');
+    client.enqueue('classify', classification({ domains: ['relationships'], roles: ['partner'] }));
+    client.enqueue('answer', { sentences: [{ text: 'You are not with anyone now; you were with Priya until recently.', citedIds: [priya] }] });
+    const result = await memory.ask('who is my partner');
+    expect(result.abstained).toBe(false);
+    expect(result.candidates).toContain(priya);
+  });
+
+  it('a role nobody ever held still abstains', async () => {
+    client.enqueue('classify', classification({ domains: ['family'], roles: ['brother'] }));
+    expect((await memory.ask('who is my brother')).text).toBe(UNKNOWN);
+    expect(client.seen).toHaveLength(1);
+  });
+});
+
 describe('forget with category words', () => {
   it('"forget my puppy" resolves the pet and erases the adoption fact', () => {
     const bruno = idOf('adopted_pet', 'Bruno');

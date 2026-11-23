@@ -1,8 +1,9 @@
 // Need-to-know selection and the closed-world check. Pure code, no model.
 
 import { MAX_CANDIDATES } from '../config.js';
-import type { EntitiesRepo } from '../db/entities.repo.js';
+import type { EntitiesRepo, EntityRow } from '../db/entities.repo.js';
 import type { FactRow, FactsRepo } from '../db/facts.repo.js';
+import { FORMER } from '../ingest/resolve.js';
 import { isGenericObject, isRoleWord, normaliseRef, roleFor } from '../roles.js';
 import { reachableDomains } from '../vocab.js';
 import type { Classification } from './classify.js';
@@ -34,12 +35,12 @@ export function select(repos: SelectRepos, classification: Classification, asOfI
       continue;
     }
     if (!isRoleWord(name)) return { candidates: [], abstain: 'unknown_name', entityIds, asOf };
-    const rows = repos.entities.allByRole(roleFor(name));
+    const rows = holdersOf(repos, roleFor(name));
     if (rows.length === 0) return { candidates: [], abstain: 'unknown_name', entityIds, asOf };
     for (const row of rows) entityIds.push(row.id);
   }
   for (const role of classification.roles) {
-    const rows = repos.entities.allByRole(roleFor(role));
+    const rows = holdersOf(repos, roleFor(role));
     if (rows.length === 0) return { candidates: [], abstain: 'unknown_role', entityIds, asOf };
     for (const row of rows) entityIds.push(row.id);
   }
@@ -65,6 +66,14 @@ export function select(repos: SelectRepos, classification: Classification, asOfI
     .sort((a, b) => b.validFrom - a.validFrom || b.id - a.id)
     .slice(0, MAX_CANDIDATES);
   return { candidates, entityIds: [...new Set(entityIds)], asOf, anchorId: anchor?.id };
+}
+
+// Current holders of a role; failing that, former holders, so "who is my partner" after a breakup
+// hands the closed fact to the answer step instead of abstaining.
+function holdersOf(repos: SelectRepos, role: string): EntityRow[] {
+  const current = repos.entities.allByRole(role);
+  if (current.length > 0 || role.startsWith(FORMER)) return current;
+  return repos.entities.allByRole(`${FORMER}${role}`);
 }
 
 // The anchor fact: same predicate, matched by name, alias, or a generic word for the category

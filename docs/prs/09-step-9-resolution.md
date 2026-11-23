@@ -29,3 +29,8 @@ npm run cli -- ask "where did I live when we got that dog"   # needs ANTHROPIC_A
 npm run cli -- ask "what is my dog called"
 npm run cli -- forget "my puppy"
 ```
+
+## Added after manual testing
+
+- "Who is my partner" after a breakup used to abstain, because nobody holds the role "partner" any more. A role with no current holder now falls back to its former holders, so the answer step receives the closed fact and can say "nobody now; previously Priya". A role nobody ever held still abstains.
+- The CLI ingest line now prints `forgotten N` and a FORGET summary for the session, so a forget request carried out from a chat turn is visible. Before this, session 48 looked like an empty session.
