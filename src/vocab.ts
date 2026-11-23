@@ -51,7 +51,8 @@ export const PREDICATES = {
   parent_of: spec(false, true, ['family'], 'parent of'),
   child_of: spec(false, true, ['family'], 'child of'),
   friend_of: spec(false, true, ['relationships'], 'friend'),
-  adopted_pet: spec(false, false, ['pets', 'home'], 'adopted pet'),
+  // Relational: the pet is an entity with the role "pet", so "my dog" resolves to it.
+  adopted_pet: spec(false, true, ['pets', 'home'], 'adopted pet'),
   prefers: spec(false, false, ['preferences'], 'prefers'),
   dislikes: spec(false, false, ['preferences'], 'dislikes'),
   // Open escape hatch: free-text key, functional per key.

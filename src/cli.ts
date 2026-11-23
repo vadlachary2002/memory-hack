@@ -59,9 +59,13 @@ async function main(args: readonly string[]): Promise<void> {
         if (memory.hasSession(session.index)) continue;
         const report = await memory.ingest(session);
         const rejected = report.rejected.map((item) => `${item.reason}: ${item.candidate}`).join('; ');
+        const forgotten = report.forgotten
+          .map((item) => `entities ${item.entityIds.join(',') || '-'} erased ${item.erasedFacts.length} stripped ${item.strippedFacts.length} redacted ${item.redactedTurns.length} scan ${item.scanClean ? 'clean' : 'HITS'}`)
+          .join('; ');
         console.log(
-          `s${report.session}: stored ${report.stored.length}, superseded ${report.superseded.length}, tainted ${report.tainted}, cost $${report.cost.toFixed(4)}` +
-            (rejected === '' ? '' : `\n  rejected ${rejected}`),
+          `s${report.session}: stored ${report.stored.length}, superseded ${report.superseded.length}, tainted ${report.tainted}, forgotten ${report.forgotten.length}, cost $${report.cost.toFixed(4)}` +
+            (rejected === '' ? '' : `\n  rejected ${rejected}`) +
+            (forgotten === '' ? '' : `\n  FORGET ${forgotten}`),
         );
       }
       return;

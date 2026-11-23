@@ -1,9 +1,10 @@
 // Need-to-know selection and the closed-world check. Pure code, no model.
 
 import { MAX_CANDIDATES } from '../config.js';
-import type { EntitiesRepo } from '../db/entities.repo.js';
+import type { EntitiesRepo, EntityRow } from '../db/entities.repo.js';
 import type { FactRow, FactsRepo } from '../db/facts.repo.js';
-import { roleFor } from '../roles.js';
+import { FORMER } from '../ingest/resolve.js';
+import { isGenericObject, isRoleWord, normaliseRef, roleFor } from '../roles.js';
 import { reachableDomains } from '../vocab.js';
 import type { Classification } from './classify.js';
 
@@ -26,13 +27,20 @@ export function select(repos: SelectRepos, classification: Classification, asOfI
   let asOf = asOfInput;
 
   // Closed world: every name and every role must resolve, or we answer nothing.
+  // A "name" that is really a category word ("dog", "boss") is resolved as a role.
   for (const name of classification.names) {
-    const entity = repos.entities.byName(name);
-    if (entity === undefined) return { candidates: [], abstain: 'unknown_name', entityIds, asOf };
-    entityIds.push(entity.id);
+    const entity = repos.entities.byName(normaliseRef(name)) ?? repos.entities.byName(name);
+    if (entity !== undefined) {
+      entityIds.push(entity.id);
+      continue;
+    }
+    if (!isRoleWord(name)) return { candidates: [], abstain: 'unknown_name', entityIds, asOf };
+    const rows = holdersOf(repos, roleFor(name));
+    if (rows.length === 0) return { candidates: [], abstain: 'unknown_name', entityIds, asOf };
+    for (const row of rows) entityIds.push(row.id);
   }
   for (const role of classification.roles) {
-    const rows = repos.entities.allByRole(roleFor(role));
+    const rows = holdersOf(repos, roleFor(role));
     if (rows.length === 0) return { candidates: [], abstain: 'unknown_role', entityIds, asOf };
     for (const row of rows) entityIds.push(row.id);
   }
@@ -60,19 +68,34 @@ export function select(repos: SelectRepos, classification: Classification, asOfI
   return { candidates, entityIds: [...new Set(entityIds)], asOf, anchorId: anchor?.id };
 }
 
-// The anchor fact: same predicate, object text or entity name containing the anchor's object.
+// Current holders of a role; failing that, former holders, so "who is my partner" after a breakup
+// hands the closed fact to the answer step instead of abstaining.
+function holdersOf(repos: SelectRepos, role: string): EntityRow[] {
+  const current = repos.entities.allByRole(role);
+  if (current.length > 0 || role.startsWith(FORMER)) return current;
+  return repos.entities.allByRole(`${FORMER}${role}`);
+}
+
+// The anchor fact: same predicate, matched by name, alias, or a generic word for the category
+// ("that dog" matches any adopted_pet). Earliest fact wins, which is what "when I got the dog" means.
 function findAnchor(repos: SelectRepos, anchor: NonNullable<Classification['timeAnchor']>): FactRow | undefined {
-  const needle = anchor.object.trim().toLowerCase();
+  const needle = normaliseRef(anchor.object);
+  const generic = isGenericObject(anchor.predicate, needle);
   const matches = repos.facts
     .all()
     .filter((fact) => fact.predicate === anchor.predicate)
-    .filter((fact) => {
-      const object = (fact.objectText ?? '').toLowerCase();
-      const name = fact.objectEntityId === null ? '' : repos.entities.nameOf(fact.objectEntityId).toLowerCase();
-      return needle === '' || object.includes(needle) || name.includes(needle);
-    })
+    .filter((fact) => generic || mentions(repos, fact, needle))
     .sort((a, b) => a.validFrom - b.validFrom);
   return matches[0];
+}
+
+function mentions(repos: SelectRepos, fact: FactRow, needle: string): boolean {
+  const object = (fact.objectText ?? '').toLowerCase();
+  if (object.includes(needle)) return true;
+  if (fact.objectEntityId === null) return false;
+  const entity = repos.entities.byId(fact.objectEntityId);
+  if (entity === undefined) return false;
+  return [entity.canonicalName ?? '', ...entity.aliases].some((name) => name.toLowerCase().includes(needle));
 }
 
 // Entity-matched facts may be closed (the question named the person), but must exist at asOf.

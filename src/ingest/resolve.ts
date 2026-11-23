@@ -25,11 +25,13 @@ export function resolveObject(entities: EntitiesRepo, candidate: Candidate, sess
   if (!spec.relational && !candidate.objectIsEntity) return undefined;
   const type: EntityType = candidate.entityType ?? (candidate.predicate === 'adopted_pet' ? 'pet' : 'person');
   const role = ROLE_OF[candidate.predicate];
+  // Pets always carry the "pet" role, whatever predicate introduced them.
+  const roles = [...(role === undefined ? [] : [role]), ...(type === 'pet' ? ['pet'] : [])];
   const row = entities.upsert({
     name: candidate.object,
     type,
     aliases: candidate.aliases,
-    roles: role === undefined ? [] : [role],
+    roles,
     sessionIdx,
   });
   return row.id;
