@@ -144,11 +144,18 @@ export class FactsRepo {
     return rows.map(toRow);
   }
 
-  // Durable, non-erased rows valid at asOf (open rows when asOf is omitted) tagged with any of the domains.
-  byDomains(domains: readonly Domain[], asOf?: number): FactRow[] {
+  // Durable, non-erased rows tagged with any of the domains. By default only rows valid at asOf
+  // (open rows when asOf is omitted); includeClosed adds rows that have ended, for questions about the past.
+  byDomains(domains: readonly Domain[], asOf?: number, includeClosed = false): FactRow[] {
     if (domains.length === 0) return [];
     const placeholders = domains.map(() => '?').join(', ');
-    const validity = asOf === undefined ? 'valid_to IS NULL' : 'valid_from <= @asOf AND (valid_to IS NULL OR valid_to > @asOf)';
+    const validity = includeClosed
+      ? asOf === undefined
+        ? '1 = 1'
+        : 'valid_from <= @asOf'
+      : asOf === undefined
+        ? 'valid_to IS NULL'
+        : 'valid_from <= @asOf AND (valid_to IS NULL OR valid_to > @asOf)';
     const rows = this.db
       .prepare(
         `${SELECT} WHERE tier = 'durable' AND erased_at IS NULL AND ${validity}

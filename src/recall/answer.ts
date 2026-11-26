@@ -23,12 +23,13 @@ export async function answer(
   candidates: readonly FactRow[],
   nameOf: NameLookup,
   rules: readonly string[] = [],
+  asOf?: number,
 ): Promise<Generated> {
   const { value, usage } = await client.structured({
     purpose: 'answer',
     schema: AnswerOutputSchema,
     system: ANSWER_SYSTEM,
-    user: buildPrompt(question, candidates, nameOf, rules),
+    user: buildPrompt(question, candidates, nameOf, rules, asOf),
     maxTokens: 1024,
   });
   const allowed = new Set(candidates.map((fact) => fact.id));
@@ -46,8 +47,24 @@ export function stripUncited(output: AnswerOutput, allowed: ReadonlySet<number>)
   return { text: kept.map((sentence) => sentence.text.trim()).join(' '), cited };
 }
 
-export function buildPrompt(question: string, candidates: readonly FactRow[], nameOf: NameLookup, rules: readonly string[]): string {
-  const lines = candidates.map((fact) => `[${fact.id}] ${renderLine(fact, nameOf)} quote: "${fact.quote ?? ''}"`);
+// When answering as of a session, "current" means current at that session, and the labels say so.
+export function buildPrompt(
+  question: string,
+  candidates: readonly FactRow[],
+  nameOf: NameLookup,
+  rules: readonly string[],
+  asOf?: number,
+): string {
+  const lines = candidates.map((fact) => `[${fact.id}] ${label(fact, nameOf, asOf)} quote: "${fact.quote ?? ''}"`);
   const ruleBlock = rules.length === 0 ? '' : `\n\nDerivation rules:\n${rules.map((rule) => `- ${rule}`).join('\n')}`;
-  return `Facts:\n${lines.join('\n')}${ruleBlock}\n\nQuestion: ${question}`;
+  const timeBlock = asOf === undefined ? '' : `\n\nAnswer as of session ${asOf}. "current as of s${asOf}" means true at that time, whatever happened later.`;
+  return `Facts:\n${lines.join('\n')}${ruleBlock}${timeBlock}\n\nQuestion: ${question}`;
+}
+
+function label(fact: FactRow, nameOf: NameLookup, asOf: number | undefined): string {
+  if (asOf === undefined) return renderLine(fact, nameOf);
+  const base = renderLine(fact, nameOf).replace(/ \((?:since s\d+|s\d+ to s\d+)\) /, ' ');
+  const currentThen = fact.validFrom <= asOf && (fact.validTo === null || fact.validTo > asOf);
+  const span = currentThen ? `(current as of s${asOf}, since s${fact.validFrom})` : `(ended at s${fact.validTo ?? '?'}, before s${asOf})`;
+  return base.replace(/ \[f\d+\]$/, ` ${span}$&`);
 }
