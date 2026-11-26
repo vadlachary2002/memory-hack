@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { runBatch, type BatchAnswer } from '../src/adapters/batch.js';
-import { AnthropicClient } from '../src/llm/anthropic.js';
+import { createClient, hasAnyKey } from '../src/llm/provider.js';
 import type { LlmClient } from '../src/llm/client.js';
 import { Memory } from '../src/memory.js';
 import { SessionInputSchema } from '../src/types.js';
@@ -83,13 +83,13 @@ if (process.argv[1] !== undefined && import.meta.url === new URL(process.argv[1]
   } catch {
     // Environment variables may already be set.
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY is not set');
+  if (!hasAnyKey()) {
+    console.error('set ANTHROPIC_API_KEY or GEMINI_API_KEY');
     process.exit(1);
   }
   const only = option('--only');
   const cases = loadCases().filter((item) => only === undefined || item.id.startsWith(only));
-  const results = await runCases(cases, new AnthropicClient());
+  const results = await runCases(cases, createClient());
   console.log(formatResults(results));
   process.exitCode = hasFailures(results) ? 1 : 0;
 }

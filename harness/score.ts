@@ -1,9 +1,9 @@
 // Scorer: replay the practice history through the library, grade every answer, report cost.
-// Run with: npm run harness -- [--runs N] [--seed S]   (needs ANTHROPIC_API_KEY)
+// Run with: npm run harness -- [--runs N] [--seed S]   (needs ANTHROPIC_API_KEY or GEMINI_API_KEY)
 
 import type { BatchAnswer } from '../src/adapters/batch.js';
 import { runBatch } from '../src/adapters/batch.js';
-import { AnthropicClient } from '../src/llm/anthropic.js';
+import { createClient, hasAnyKey } from '../src/llm/provider.js';
 import type { LlmClient } from '../src/llm/client.js';
 import { Memory } from '../src/memory.js';
 import { NO_INFO, UNKNOWN } from '../src/recall/answer.js';
@@ -121,10 +121,10 @@ if (process.argv[1] !== undefined && import.meta.url === new URL(process.argv[1]
   } catch {
     // Environment variables may already be set.
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY is not set');
+  if (!hasAnyKey()) {
+    console.error('set ANTHROPIC_API_KEY or GEMINI_API_KEY');
     process.exit(1);
   }
-  const summary = await scoreRuns(loadScript(), new AnthropicClient(), option('--runs', 1), option('--seed', 2026));
+  const summary = await scoreRuns(loadScript(), createClient(), option('--runs', 1), option('--seed', 2026));
   console.log(formatSummary(summary));
 }
