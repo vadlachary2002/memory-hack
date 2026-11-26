@@ -5,7 +5,8 @@ import { z } from 'zod';
 import { startServer } from './adapters/http.js';
 import { dbPath } from './config.js';
 import { FixtureSchema, loadFixture } from './fixture.js';
-import { createClient } from './llm/provider.js';
+import { GeminiClient } from './llm/gemini.js';
+import { createClient, keyFor } from './llm/provider.js';
 import { Memory } from './memory.js';
 import { renderLine } from './render.js';
 import { SessionInputSchema } from './types.js';
@@ -21,6 +22,7 @@ const USAGE = `usage:
   cli forget "<name or relation>"     erase a person (name, alias, or words like "my ex") and self-audit
   cli audit "<name>"                   scan every text column for a name; passes when nothing is found
   cli cost                             model calls and spend so far
+  cli models                           list the Gemini model ids your GEMINI_API_KEY can use
   cli serve [--port N]                 HTTP adapter: POST /ingest /ask /forget /reset, GET /summary /audit /cost
 set TRACE=1 to print one line per decision`;
 
@@ -125,6 +127,12 @@ async function main(args: readonly string[]): Promise<void> {
       const server = await startServer(memory, port);
       const address = server.address();
       console.log(`listening on port ${typeof address === 'object' && address !== null ? address.port : port}`);
+      return;
+    }
+    case 'models': {
+      const key = keyFor('gemini');
+      if (key === undefined) return fail('GEMINI_API_KEY is not set');
+      for (const name of await new GeminiClient(key).listModels()) console.log(name);
       return;
     }
     case 'cost': {

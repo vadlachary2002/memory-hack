@@ -10,8 +10,20 @@ const DEFAULT_MAX_TOKENS = 4096;
 export class GeminiClient implements LlmClient {
   private readonly client: GoogleGenAI;
 
+  // Preview models are served on v1beta; the SDK's default version returns 404 for them.
   constructor(apiKey?: string) {
-    this.client = new GoogleGenAI(apiKey === undefined ? {} : { apiKey });
+    this.client = new GoogleGenAI({ ...(apiKey === undefined ? {} : { apiKey }), httpOptions: { apiVersion: 'v1beta' } });
+  }
+
+  // Model ids the key can use with generateContent, for picking names that exist today.
+  async listModels(): Promise<string[]> {
+    const names: string[] = [];
+    const pager = await this.client.models.list();
+    for await (const model of pager) {
+      const actions = model.supportedActions ?? [];
+      if (actions.length === 0 || actions.includes('generateContent')) names.push((model.name ?? '').replace(/^models\//, ''));
+    }
+    return names.filter((name) => name !== '').sort();
   }
 
   async structured<T>(request: StructuredRequest<T>): Promise<StructuredResult<T>> {
