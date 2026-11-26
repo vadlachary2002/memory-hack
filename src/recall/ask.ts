@@ -24,7 +24,7 @@ export async function ask(repos: AskRepos, client: LlmClient, question: string, 
 
   trace('classify', { domains: classification.domains, names: classification.names, roles: classification.roles, anchor: classification.timeAnchor?.object ?? '-' });
 
-  const selection = select(repos, classification, { asOf: opts.asOf, includeFormer: asksAboutPast(question) });
+  const selection = select(repos, classification, { asOf: opts.asOf, past: asksAboutPast(question) });
   const base = { domains: classification.domains, candidates: selection.candidates.map((fact) => fact.id), asOf: selection.asOf };
   trace('select', { asOf: selection.asOf ?? '-', entities: selection.entityIds, candidates: base.candidates, abstain: selection.abstain ?? '-' });
   if (selection.abstain !== undefined) return { ...base, text: UNKNOWN, cited: [], abstained: true, cost };
@@ -32,7 +32,7 @@ export async function ask(repos: AskRepos, client: LlmClient, question: string, 
 
   const nameOf = (id: number): string => repos.entities.nameOf(id);
   const rules = derivationRules(repos.facts, repos.entities.ensureUser(), classification.domains, selection.asOf);
-  const generated = await answer(client, question, selection.candidates, nameOf, rules);
+  const generated = await answer(client, question, selection.candidates, nameOf, rules, selection.asOf);
   cost += repos.calls.record('answer', generated.usage, sessionIdx);
   trace('answer', { cited: generated.cited, rules: rules.length, cost });
   return { ...base, text: generated.text, cited: generated.cited, abstained: false, cost };

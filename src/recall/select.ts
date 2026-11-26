@@ -21,11 +21,12 @@ export type Selection = {
 
 export type SelectRepos = { facts: FactsRepo; entities: EntitiesRepo };
 
-export type SelectOptions = { asOf?: number; includeFormer?: boolean };
+// past: the question asks about earlier times, so closed facts and former role holders are fair game.
+export type SelectOptions = { asOf?: number; past?: boolean };
 
 export function select(repos: SelectRepos, classification: Classification, options: SelectOptions = {}): Selection {
   const entityIds: number[] = [];
-  const includeFormer = options.includeFormer ?? false;
+  const includeFormer = options.past ?? false;
   let asOf = options.asOf;
 
   // Closed world: every name and every role must resolve, or we answer nothing.
@@ -57,7 +58,7 @@ export function select(repos: SelectRepos, classification: Classification, optio
   // Domain candidates come from one hop of adjacency; entity candidates from direct mentions.
   const byId = new Map<number, FactRow>();
   if (anchor !== undefined) byId.set(anchor.id, anchor);
-  for (const fact of repos.facts.byDomains(reachableDomains(classification.domains), asOf)) byId.set(fact.id, fact);
+  for (const fact of repos.facts.byDomains(reachableDomains(classification.domains), asOf, includeFormer)) byId.set(fact.id, fact);
   for (const id of new Set(entityIds)) {
     for (const fact of repos.facts.byEntity(id)) {
       if (fact.tier !== 'durable' || !validAt(fact, asOf)) continue;
