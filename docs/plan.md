@@ -318,3 +318,7 @@ Adjacency (a question in the left domain may see facts in the right domains, plu
 ## 16. Out of scope
 
 Web UI, embeddings, multi-user, auth, the kickoff twist, model inferences as stored facts, LangChain or other frameworks.
+
+## 17. Extended design, not built: model decides, code verifies
+
+The ingest path currently reads sentence subjects with code (`src/ingest/attribution.ts`). The cleaner design asks the extractor for an explicit subject, role and polarity, verifies every candidate with a second cheap call, reconciles in code and abstains on disagreement, keeping regex only where it can do no harm. Full detail, reconciliation table, cost and test list: `docs/plan-verifier.md`.

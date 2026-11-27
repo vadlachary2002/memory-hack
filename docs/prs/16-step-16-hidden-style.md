@@ -48,3 +48,21 @@ MODEL=claude-sonnet-5-5 npm run hidden
 MODEL=gemini-3.8-flash npm run harness -- --runs 3
 MODEL=claude-haiku-5-5 npm run cases
 ```
+
+## Rerun after the fixes
+
+| Run | Result | Leaks |
+|---|---|---|
+| hidden, Gemini 3.8 Flash | 20/22, $0.033 | 0 |
+| hidden, Sonnet 5.5 | 21/22, $0.062 | 0 |
+| harness x3, Gemini 3.8 Flash | 13/13 every run, median $0.049 | 0 |
+| cases, Haiku 5.5 | 34/36, $0.005 | 0 |
+
+Remaining misses, none of them leaks:
+
+- Gemini, "what can't my sister eat": "Unlike my sister Meena" does not start the sentence, so the code reader never saw the word sister and Meena was created as a contact; the role question then abstained. The regex reader's limit, exactly as expected.
+- Sonnet, "what am I allergic to": the answer correctly said the user has no allergy, then volunteered Meena's gluten. A need-to-know rule for other people's facts fixes this in code.
+- Gemini, "who did I adopt Simba with": "You adopted Simba with [redacted]". A guard that abstains when the answer carries a redacted hole fixes this in code.
+- Haiku, two case misses ("where did I live before Delhi" after "shifted base", "what is my sibling's name"): the cheapest model's extraction, not the ledger.
+
+The cleaner design, with the model naming the subject and a second call verifying it, is written up in `docs/plan-verifier.md` and is not implemented; the current build stays because it scores well and leaks nothing.
