@@ -38,7 +38,7 @@ export function storeCandidate(
   if (reason !== undefined) return { kind: 'rejected', reason };
   const attrKey = candidate.attrKey ?? undefined;
   // A fact about someone in the user's life ("my brother works at TCS") has that person as its subject.
-  const subjectId = subjectFor(entities, userId, candidate, sessionIdx);
+  const subjectId = subjectFor(entities, userId, candidate);
   if (candidate.ended) {
     const ids = facts.closeOpen(subjectId, candidate.predicate, sessionIdx, {
       objectText: candidate.object,
@@ -66,14 +66,13 @@ export function storeCandidate(
   return { kind: 'stored', id: result.id, superseded: result.superseded };
 }
 
-const SELF = /^(me|myself|i|user|the user)$/i;
+const SELF = /^(me|myself|i|we|us|user|the user)$/i;
 
-// The user, or a person the user has introduced. Facts about strangers are not stored under a new name;
-// they fall back to the user, which the gate and the quote rule already constrain.
-function subjectFor(entities: EntitiesRepo, userId: number, candidate: Candidate, sessionIdx: number): number {
-  const about = candidate.about.trim();
-  if (about === '' || SELF.test(about)) return userId;
-  const existing = entities.byName(about);
-  if (existing !== undefined) return existing.id;
-  return entities.upsert({ name: about, type: 'person', sessionIdx }).id;
+// The user, or a person the user has already introduced through a relationship. Anything else
+// ("Priya and I", "my manager", a stranger) falls back to the user: no entity is ever created from "about",
+// so a careless model cannot plant a second row carrying someone's name.
+export function subjectFor(entities: EntitiesRepo, userId: number, candidate: Candidate): number {
+  const about = candidate.about.trim().replace(/^my\s+/i, '');
+  if (about === '' || SELF.test(about) || /\s(and|&)\s/i.test(about)) return userId;
+  return entities.byName(about)?.id ?? userId;
 }

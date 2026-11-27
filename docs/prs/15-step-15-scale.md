@@ -29,3 +29,9 @@ The harness proves correctness on 60 sessions. It says nothing about what happen
 ```sh
 MODEL=claude-haiku-5-5 npm run scale -- --sessions 2000 --filler 2 --concurrency 8
 ```
+
+## Added after the six-model comparison
+
+- The `about` field from step 14 let a model write "Priya and I" or "we" as the subject, and the code created an entity row with that string as a name. Forgetting Priya erased her row but not that one, so the audit flagged a leak and two harness answers lost their anchor. `about` now resolves only to a person already in the ledger and never creates a row; anything else is the user. A test ingests "Priya and I", "we" and a stranger and asserts the entity table holds only the user and the pet.
+- Gemini 3 models think before answering and the thoughts count against the output limit, so structured JSON was truncated. The client now sets a low thinking level, a larger output limit, and retries once on malformed JSON.
+- The comparison table now lists failing harness questions, not only failing cases.

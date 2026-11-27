@@ -86,6 +86,10 @@ export async function extractPhase(client: LlmClient, input: SessionInput): Prom
   return { session, clean, tainted, forgets, accepted: extracted.accepted, rejected: extracted.rejected, usage: extracted.usage };
 }
 
+function isSelf(about: string): boolean {
+  return /^(me|myself|i|we|us|user|the user)?$/i.test(about.trim());
+}
+
 // Phase two: turns, facts, forgets, cost. Must run in session order.
 export function storePhase(repos: Repos, prepared: Prepared, onForget?: OnForget): IngestReport {
   const { session } = prepared;
@@ -102,7 +106,9 @@ export function storePhase(repos: Repos, prepared: Prepared, onForget?: OnForget
   });
 
   if (prepared.usage !== undefined) report.cost = repos.calls.record('extract', prepared.usage, session.index);
-  for (const candidate of prepared.accepted) {
+  // Facts about the user first: they introduce the people that facts about others may then attach to.
+  const ordered = [...prepared.accepted].sort((a, b) => Number(!isSelf(a.about)) - Number(!isSelf(b.about)));
+  for (const candidate of ordered) {
     const turnId = turnIds.get(candidate.turnIndex);
     if (turnId === undefined) continue;
     const context = prepared.clean.filter((span) => span.turnIndex === candidate.turnIndex).map((span) => span.text).join(' ');

@@ -21,6 +21,24 @@ beforeEach(async () => {
   await memory.ingest({ index: 1, turns: [{ role: 'user', text: 'My brother Kiran works at TCS in Hyderabad.' }] });
 });
 
+describe('about never creates entities', () => {
+  it('falls back to the user for "Priya and I", "we", "my manager" and strangers, and leaves no new rows', async () => {
+    const client = new FakeClient().enqueue('extract', {
+      facts: [
+        candidate({ about: 'Priya and I', predicate: 'adopted_pet', object: 'Bruno', quote: 'Priya and I adopted Bruno', objectIsEntity: true, entityType: 'pet' }),
+        candidate({ about: 'we', predicate: 'lives_in', object: 'Pune', quote: 'we moved to Pune' }),
+        candidate({ about: 'Rahul', predicate: 'works_at', object: 'Zoho', quote: 'Rahul works at Zoho' }),
+      ],
+    });
+    const fresh = new Memory({ dbPath: ':memory:', llm: client });
+    await fresh.ingest({ index: 1, turns: [{ role: 'user', text: 'Priya and I adopted Bruno. we moved to Pune. Rahul works at Zoho' }] });
+    const user = fresh.facts().find((f) => f.predicate === 'lives_in')?.subjectEntityId;
+    expect(fresh.facts().every((f) => f.subjectEntityId === user)).toBe(true);
+    const names = (fresh.rawDb().prepare('SELECT canonical_name FROM entities').all() as { canonical_name: string | null }[]).map((r) => r.canonical_name);
+    expect(names).toEqual(['user', 'Bruno']);
+  });
+});
+
 describe('facts about people in the user\'s life', () => {
   it('stores the employer under the brother, not the user, and renders it with his name', () => {
     const facts = memory.facts();

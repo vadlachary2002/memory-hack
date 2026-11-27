@@ -1,11 +1,12 @@
 // Gemini implementation of LlmClient. The only file that imports the Google SDK.
 
-import { GoogleGenAI, type GenerateContentResponse } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel, type GenerateContentResponse } from '@google/genai';
 import { z, type ZodType } from 'zod';
 import { modelFor } from '../config.js';
 import type { LlmClient, StructuredRequest, StructuredResult, Usage } from './client.js';
 
 const DEFAULT_MAX_TOKENS = 4096;
+const MIN_OUTPUT_TOKENS = 8192;
 
 export class GeminiClient implements LlmClient {
   private readonly client: GoogleGenAI;
@@ -26,22 +27,33 @@ export class GeminiClient implements LlmClient {
     return names.filter((name) => name !== '').sort();
   }
 
+  // Gemini 3 models think before answering and the thoughts count against the output limit, so the
+  // limit is generous and thinking is kept low; a truncated or malformed JSON body gets one retry.
   async structured<T>(request: StructuredRequest<T>): Promise<StructuredResult<T>> {
     const model = modelFor(request.purpose);
-    const response = await this.client.models.generateContent({
-      model,
-      contents: request.user,
-      config: {
-        systemInstruction: request.system,
-        responseMimeType: 'application/json',
-        responseJsonSchema: jsonSchemaFor(request.schema),
-        maxOutputTokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
-      },
-    });
-    const text = response.text;
-    if (text === undefined || text.trim() === '') throw new Error(`model returned no ${request.purpose} output`);
-    const value = request.schema.parse(JSON.parse(text));
-    return { value, usage: usageOf(model, response) };
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await this.client.models.generateContent({
+        model,
+        contents: request.user,
+        config: {
+          systemInstruction: request.system,
+          responseMimeType: 'application/json',
+          responseJsonSchema: jsonSchemaFor(request.schema),
+          maxOutputTokens: Math.max(request.maxTokens ?? DEFAULT_MAX_TOKENS, MIN_OUTPUT_TOKENS),
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        },
+      });
+      const text = response.text;
+      try {
+        if (text === undefined || text.trim() === '') throw new Error(`model returned no ${request.purpose} output`);
+        const value = request.schema.parse(JSON.parse(text));
+        return { value, usage: usageOf(model, response) };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 }
 
