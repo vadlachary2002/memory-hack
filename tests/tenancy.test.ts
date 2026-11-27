@@ -11,7 +11,7 @@ let dir: string;
 function extraction(object: string, quote: string): Record<string, unknown> {
   return {
     facts: [
-      { turnIndex: 1, predicate: 'lives_in', attrKey: null, object, quote, objectIsEntity: false, entityType: null, aliases: [], domains: ['location'], ended: false },
+      { turnIndex: 1, about: 'me', predicate: 'lives_in', attrKey: null, object, quote, objectIsEntity: false, entityType: null, aliases: [], domains: ['location'], ended: false },
     ],
   };
 }

@@ -8,7 +8,7 @@ import { SessionInputSchema } from '../src/types.js';
 const SESSIONS = z.array(SessionInputSchema).parse(JSON.parse(readFileSync(new URL('../fixtures/sessions.json', import.meta.url), 'utf8')));
 
 function base(): Record<string, unknown> {
-  return { attrKey: null, objectIsEntity: false, entityType: null, aliases: [], domains: [], ended: false };
+  return { about: 'me', attrKey: null, objectIsEntity: false, entityType: null, aliases: [], domains: [], ended: false };
 }
 
 describe('Memory.ingest over the three fixture sessions', () => {

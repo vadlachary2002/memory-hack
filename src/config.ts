@@ -22,11 +22,18 @@ export const PRICES_PER_MTOK: Record<string, Price> = {
   'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2.5 },
   'claude-haiku-5-5': { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 },
   'gemini-3-flash-preview': { input: 0.5, output: 3, cacheRead: 0.05, cacheWrite: 0 },
+  'gemini-3.6-flash': { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0 },
+  'gemini-3.7-flash': { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0 },
+  'gemini-3.8-flash': { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0 },
   'gemini-3.1-pro-preview': { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 0 },
+  'gemini-4-argon': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 0 },
+  'gemini-4-carbon': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 0 },
 };
 
 const FALLBACK_PRICE: Price = { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 };
 const FALLBACK_GEMINI_PRICE: Price = { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 0 };
+// Flash-Lite list prices were not verifiable on Google's pages; this is the published tier estimate.
+const FALLBACK_GEMINI_LITE_PRICE: Price = { input: 0.1, output: 0.4, cacheRead: 0.01, cacheWrite: 0 };
 
 type Env = Record<string, string | undefined>;
 
@@ -45,7 +52,9 @@ export function defaultModel(env: Env = process.env): string {
 export function priceFor(model: string): Price {
   const known = PRICES_PER_MTOK[model];
   if (known !== undefined) return known;
-  return model.toLowerCase().startsWith('gemini') ? FALLBACK_GEMINI_PRICE : FALLBACK_PRICE;
+  const name = model.toLowerCase();
+  if (!name.startsWith('gemini')) return FALLBACK_PRICE;
+  return name.includes('lite') ? FALLBACK_GEMINI_LITE_PRICE : FALLBACK_GEMINI_PRICE;
 }
 
 export function dbPath(): string {

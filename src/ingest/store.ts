@@ -37,8 +37,10 @@ export function storeCandidate(
   const reason = gate(candidate);
   if (reason !== undefined) return { kind: 'rejected', reason };
   const attrKey = candidate.attrKey ?? undefined;
+  // A fact about someone in the user's life ("my brother works at TCS") has that person as its subject.
+  const subjectId = subjectFor(entities, userId, candidate, sessionIdx);
   if (candidate.ended) {
-    const ids = facts.closeOpen(userId, candidate.predicate, sessionIdx, {
+    const ids = facts.closeOpen(subjectId, candidate.predicate, sessionIdx, {
       objectText: candidate.object,
       objectEntityId,
       attrKey,
@@ -49,7 +51,7 @@ export function storeCandidate(
     return { kind: 'closed', ids };
   }
   const result = facts.insert({
-    subjectEntityId: userId,
+    subjectEntityId: subjectId,
     predicate: candidate.predicate,
     attrKey,
     objectText: candidate.object,
@@ -62,4 +64,16 @@ export function storeCandidate(
   if (result.noop) return { kind: 'noop', id: result.id };
   markSupersededFormer(entities, facts, result.superseded, candidate.predicate, objectEntityId);
   return { kind: 'stored', id: result.id, superseded: result.superseded };
+}
+
+const SELF = /^(me|myself|i|user|the user)$/i;
+
+// The user, or a person the user has introduced. Facts about strangers are not stored under a new name;
+// they fall back to the user, which the gate and the quote rule already constrain.
+function subjectFor(entities: EntitiesRepo, userId: number, candidate: Candidate, sessionIdx: number): number {
+  const about = candidate.about.trim();
+  if (about === '' || SELF.test(about)) return userId;
+  const existing = entities.byName(about);
+  if (existing !== undefined) return existing.id;
+  return entities.upsert({ name: about, type: 'person', sessionIdx }).id;
 }

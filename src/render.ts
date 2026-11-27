@@ -36,13 +36,17 @@ export function renderSession(facts: readonly FactRow[], sessionIdx: number, nam
   return lines.join('\n');
 }
 
-// One line: "lives in Pune (s2 to s18) [f1]".
+// One line: "lives in Pune (s2 to s18) [f1]". Facts about someone else carry their name: "Kiran: works at TCS".
 export function renderLine(fact: FactRow, nameOf: NameLookup): string {
   const phrase = fact.predicate === 'attribute' ? `${fact.attrKey ?? 'attribute'}:` : PREDICATES[fact.predicate].phrase;
   const object = fact.objectEntityId !== null ? nameOf(fact.objectEntityId) : (fact.objectText ?? '[redacted]');
   const span = fact.validTo === null ? `(since s${fact.validFrom})` : `(s${fact.validFrom} to s${fact.validTo})`;
-  return `${phrase} ${object} ${span} [f${fact.id}]`;
+  const subject = nameOf(fact.subjectEntityId);
+  const prefix = subject === USER_NAME || subject === '[redacted]' ? '' : `${subject}: `;
+  return `${prefix}${phrase} ${object} ${span} [f${fact.id}]`;
 }
+
+const USER_NAME = 'user';
 
 function byPredicateThenId(a: FactRow, b: FactRow): number {
   const order = (ORDER.get(a.predicate) ?? 0) - (ORDER.get(b.predicate) ?? 0);

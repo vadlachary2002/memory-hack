@@ -11,6 +11,8 @@ import type { Span } from './taint.js';
 
 export const CandidateSchema = z.object({
   turnIndex: z.number().int(),
+  // "me" when the fact is about the user; otherwise the name of the person in the user's life it is about.
+  about: z.string(),
   predicate: z.enum(PREDICATE_NAMES),
   attrKey: z.string().nullable(),
   object: z.string(),

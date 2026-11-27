@@ -21,7 +21,7 @@ describe('scenario cases file', () => {
     if (item === undefined) throw new Error('case missing');
     const client = new FakeClient()
       .enqueue('extract', {
-        facts: [{ turnIndex: 1, predicate: 'partner_of', attrKey: null, object: 'Neha', quote: 'Neha is my girlfriend', objectIsEntity: true, entityType: 'person', aliases: [], domains: ['relationships'], ended: false }],
+        facts: [{ turnIndex: 1, about: 'me', predicate: 'partner_of', attrKey: null, object: 'Neha', quote: 'Neha is my girlfriend', objectIsEntity: true, entityType: 'person', aliases: [], domains: ['relationships'], ended: false }],
       })
       .enqueue('classify', { domains: ['relationships'], names: [], roles: ['girlfriend'], timeAnchor: null });
     const result = await runCase(item, client);

@@ -79,7 +79,7 @@ describe('runBatch with a forget request inside the history', () => {
       { index: 2, turns: [{ role: 'user' as const, text: 'Please forget everything about Priya, completely.' }] },
     ];
     client.enqueue('extract', {
-      facts: [{ turnIndex: 1, predicate: 'partner_of', attrKey: null, object: 'Priya', quote: 'Priya and I moved in together', objectIsEntity: true, entityType: 'person', aliases: [], domains: ['relationships'], ended: false }],
+      facts: [{ turnIndex: 1, about: 'me', predicate: 'partner_of', attrKey: null, object: 'Priya', quote: 'Priya and I moved in together', objectIsEntity: true, entityType: 'person', aliases: [], domains: ['relationships'], ended: false }],
     });
     client.enqueue('classify', { domains: ['relationships'], names: ['Priya'], roles: [], timeAnchor: null });
     client.enqueue('answer', { sentences: [{ text: 'You moved in with Priya.', citedIds: [1] }] });
