@@ -124,7 +124,7 @@ export function specificRolesIn(text: string, generic: string | undefined): stri
 }
 
 // Past markers in a question mean former holders of a role are wanted too: "who was my old boss".
-const PAST_MARKER = /\b(old|former|previous|prior|ex|earlier|before|first|was|were|used to)\b/i;
+const PAST_MARKER = /\b(old|former|previous|prior|ex|earlier|before|first|was|were|used to|ago|previously|originally|history|ever|all|every|back then|so far)\b/i;
 
 export function asksAboutPast(question: string): boolean {
   return PAST_MARKER.test(question);

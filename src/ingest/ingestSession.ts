@@ -9,8 +9,8 @@ import type { LlmClient, Usage } from '../llm/client.js';
 import { trace } from '../trace.js';
 import { SessionInputSchema, type ForgetReport, type ForgetTarget, type IngestReport, type SessionInput } from '../types.js';
 import { extractSession, type Candidate, type Rejected } from './extract.js';
-import { detectForget } from './intents.js';
-import { resolveObject } from './resolve.js';
+import { detectEndings, detectForget } from './intents.js';
+import { markFormer, resolveObject } from './resolve.js';
 import { scrubAccountNumbers } from './secrets.js';
 import { storeCandidate } from './store.js';
 import { splitTurn, storableText, type Span } from './taint.js';
@@ -127,6 +127,17 @@ export function storePhase(repos: Repos, prepared: Prepared, onForget?: OnForget
         break;
       case 'noop':
         break;
+    }
+  }
+
+  // Relationship endings found in code close the partner fact even when the extractor missed them.
+  for (const ending of prepared.clean.flatMap((span) => detectEndings(span.text))) {
+    const partner = ending.name === undefined ? undefined : repos.entities.byName(ending.name);
+    const closed = repos.facts.closeOpen(userId, ending.predicate, session.index, partner === undefined ? {} : { objectEntityId: partner.id });
+    for (const id of closed) {
+      const row = repos.facts.byId(id);
+      if (row?.objectEntityId != null) markFormer(repos.entities, row.objectEntityId, ending.predicate);
+      report.superseded.push(id);
     }
   }
 

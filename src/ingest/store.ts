@@ -5,6 +5,7 @@ import type { FactsRepo } from '../db/facts.repo.js';
 import type { RejectReason } from '../types.js';
 import { PREDICATES } from '../vocab.js';
 import type { Candidate } from './extract.js';
+import { attribute } from './attribution.js';
 import { markFormer, markSupersededFormer } from './resolve.js';
 import { hasAccountNumber } from './secrets.js';
 
@@ -55,7 +56,8 @@ export function storeCandidate(
   if (reason !== undefined) return { kind: 'rejected', reason };
   const attrKey = candidate.attrKey ?? undefined;
   // A fact about someone in the user's life ("my brother works at TCS") has that person as its subject.
-  const subjectId = subjectFor(entities, userId, candidate);
+  const subjectId = subjectFor(entities, userId, candidate, context, sessionIdx);
+  if (subjectId === undefined) return { kind: 'rejected', reason: 'not_about_user' };
   if (candidate.ended) {
     const ids = facts.closeOpen(subjectId, candidate.predicate, sessionIdx, {
       objectText: candidate.object,
@@ -85,11 +87,37 @@ export function storeCandidate(
 
 const SELF = /^(me|myself|i|we|us|user|the user)$/i;
 
-// The user, or a person the user has already introduced through a relationship. Anything else
-// ("Priya and I", "my manager", a stranger) falls back to the user: no entity is ever created from "about",
-// so a careless model cannot plant a second row carrying someone's name.
-export function subjectFor(entities: EntitiesRepo, userId: number, candidate: Candidate): number {
+function namesObject(name: string, candidate: Candidate): boolean {
+  const object = candidate.object.trim().toLowerCase();
+  const lower = name.toLowerCase();
+  return object === lower || object.startsWith(`${lower} `) || candidate.objectIsEntity === true && object.includes(lower);
+}
+
+// Who the fact is about. The sentence's grammar wins over the extractor's "about": "my colleague Ravi
+// moved" is Ravi's move even if the model said "me". A person introduced with a relationship word
+// ("my colleague Ravi") is created with that role; a bare name that appears as the sentence subject is
+// created as a contact; a name the ledger does not know and the sentence does not introduce is refused,
+// never pinned on the user. A negated statement ("I'm not allergic to anything") is refused.
+export function subjectFor(
+  entities: EntitiesRepo,
+  userId: number,
+  candidate: Candidate,
+  context: string,
+  sessionIdx: number,
+): number | undefined {
+  const sentence = sentenceContaining(context, candidate.quote) ?? candidate.quote;
+  const before = context.slice(0, Math.max(0, context.indexOf(sentence)));
+  const grammar = attribute(sentence, before);
+  if (grammar.kind === 'negated') return undefined;
+  if (grammar.kind === 'unknown') return undefined;
+  if (grammar.kind === 'other') {
+    // "Neha is my girlfriend": the named person is the fact's object, so the fact is still the user's.
+    if (namesObject(grammar.name, candidate)) return userId;
+    const existing = entities.byName(grammar.name);
+    if (existing !== undefined) return existing.id;
+    return entities.upsert({ name: grammar.name, type: 'person', roles: [grammar.role ?? 'contact'], sessionIdx }).id;
+  }
   const about = candidate.about.trim().replace(/^my\s+/i, '');
   if (about === '' || SELF.test(about) || /\s(and|&)\s/i.test(about)) return userId;
-  return entities.byName(about)?.id ?? userId;
+  return entities.byName(about)?.id;
 }

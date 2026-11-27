@@ -32,8 +32,11 @@ export class GeminiClient implements LlmClient {
   async structured<T>(request: StructuredRequest<T>): Promise<StructuredResult<T>> {
     const model = modelFor(request.purpose);
     let lastError: unknown;
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      const response = await this.client.models.generateContent({
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      let response: GenerateContentResponse;
+      try {
+        response = await this.client.models.generateContent({
         model,
         contents: request.user,
         config: {
@@ -44,6 +47,11 @@ export class GeminiClient implements LlmClient {
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         },
       });
+      } catch (error) {
+        // Network blips and rate limits are retried; anything else is rethrown after the last attempt.
+        lastError = error;
+        continue;
+      }
       const text = response.text;
       try {
         if (text === undefined || text.trim() === '') throw new Error(`model returned no ${request.purpose} output`);

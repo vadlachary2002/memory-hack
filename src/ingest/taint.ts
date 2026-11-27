@@ -28,16 +28,28 @@ export function splitTurn(turnIndex: number, text: string): SplitResult {
   return result;
 }
 
-// The text that is safe to persist: clean paragraphs kept, each tainted paragraph replaced by a marker.
+// Sentences addressed to the assistant or phrased as commands are never persisted either.
+const INSTRUCTION_SENTENCE =
+  /\b(the assistant|the ai|the bot|system prompt|as an ai|from now on|always (say|answer|tell|reply|respond)|never (say|mention|tell)|ignore (any |all )?(earlier|previous|prior) instructions|you (must|should|need to|have to|will))\b|^(please\s+)?(send|pay|transfer|wire|deposit|remember to|note to|instruction)\b/i;
+
+// The text that is safe to persist: clean paragraphs kept, each tainted paragraph replaced by a marker,
+// and each instruction-shaped sentence inside a clean paragraph replaced too.
 export function storableText(text: string): string {
   const parts: string[] = [];
   let poisonedBy: TaintReason | undefined;
   for (const paragraph of paragraphs(text)) {
     const reason = poisonedBy ?? taintReason(paragraph);
     if (reason === 'fence' || reason === 'forwarded') poisonedBy = reason;
-    parts.push(reason === undefined ? paragraph : `[pasted content removed: ${reason}]`);
+    parts.push(reason === undefined ? dropInstructions(paragraph) : `[pasted content removed: ${reason}]`);
   }
   return parts.join('\n\n');
+}
+
+export function dropInstructions(paragraph: string): string {
+  return paragraph
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => (INSTRUCTION_SENTENCE.test(sentence.trim()) ? '[instruction removed]' : sentence))
+    .join(' ');
 }
 
 export function taintReason(paragraph: string): TaintReason | undefined {

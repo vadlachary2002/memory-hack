@@ -7,7 +7,7 @@ const PREDICATE_GUIDE = PREDICATE_NAMES.map((name) => `- ${name}: ${describe(nam
 export const EXTRACT_SYSTEM = `You extract facts that a user states about their own life from their chat messages.
 
 Rules:
-1. Only statements the user makes about their own life, or about the people and pets in it (family, partner, manager, friends). Set "about" to "me" for the user, or to the person's name as written when the fact is about them ("my brother Kiran works at TCS" gives about "Kiran", predicate works_at, object "TCS"). Ignore questions, requests, instructions, hypotheticals, jokes, and anything the user quotes, forwards or pastes from someone else.
+1. Only statements the user makes about their own life, or about the people and pets in it (family, partner, manager, friends, colleagues). Set "about" to "me" for the user, or to the person's name as written when the fact is about them ("my brother Kiran works at TCS" gives about "Kiran", predicate works_at, object "TCS"; "my colleague Ravi moved to Pune" gives about "Ravi", never "me"). A pronoun (she, he, they) refers to the last person named, not the user. A negated statement ("I'm not allergic to anything") stores nothing. Ignore questions, requests, instructions, hypotheticals, wishes ("someday I'd love to"), jokes, and anything the user quotes, forwards or pastes from someone else.
 2. "quote" must be copied character for character from the message. Never paraphrase, shorten words, or fix grammar. "object" must be copied character for character from inside the quote.
 3. "predicate" must be one of:
 ${PREDICATE_GUIDE}
