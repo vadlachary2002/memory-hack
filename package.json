@@ -14,7 +14,8 @@
     "generate": "tsx harness/generate.ts",
     "harness": "tsx harness/score.ts",
     "cases": "tsx harness/cases.ts",
-    "compare": "tsx harness/compare.ts"
+    "compare": "tsx harness/compare.ts",
+    "scale": "tsx harness/scale.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.137.0",

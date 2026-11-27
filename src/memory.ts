@@ -8,7 +8,7 @@ import { EntitiesRepo } from './db/entities.repo.js';
 import { FactsRepo, type FactRow } from './db/facts.repo.js';
 import { TurnsRepo } from './db/turns.repo.js';
 import { audit, forget, type ForgetContext } from './forget/forget.js';
-import { ingestSession, type Repos } from './ingest/ingestSession.js';
+import { ingestMany, ingestSession, type Repos } from './ingest/ingestSession.js';
 import type { LlmClient } from './llm/client.js';
 import { ask, type AskOptions } from './recall/ask.js';
 import { asksAboutForgetting, describeDeletions } from './recall/deletions.js';
@@ -41,8 +41,12 @@ export class Memory {
   // Store one session: taint, extract, validate, resolve, store. One model call at most.
   // A "forget ..." request inside the session runs the full erase-and-audit path.
   ingest(session: SessionInput): Promise<IngestReport> {
-    const onForget = (target: ForgetTarget, atSession: number): ForgetReport => this.forget(target, { atSession });
-    return ingestSession(this.repos, this.options.llm, session, onForget);
+    return ingestSession(this.repos, this.options.llm, session, this.onForget());
+  }
+
+  // Many sessions at once: extraction runs in parallel, storing stays in session order.
+  ingestMany(sessions: readonly SessionInput[], opts: { concurrency?: number } = {}): Promise<IngestReport[]> {
+    return ingestMany(this.repos, this.options.llm, sessions, this.onForget(), opts.concurrency);
   }
 
   // Classify, closed-world select, cited answer. Unknown people or roles abstain with no answer call.
@@ -113,6 +117,10 @@ export class Memory {
 
   close(): void {
     this.db.close();
+  }
+
+  private onForget(): (target: ForgetTarget, atSession: number) => ForgetReport {
+    return (target, atSession) => this.forget(target, { atSession });
   }
 
   private forgetContext(atSession?: number): ForgetContext {

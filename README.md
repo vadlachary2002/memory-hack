@@ -30,7 +30,7 @@ TypeScript, Node 22, SQLite (better-sqlite3), Anthropic SDK behind a one-method 
 
 ```sh
 npm install                    # Node 22
-npm test                       # 107 unit tests, no API key needed
+npm test                       # 110 unit tests, no API key needed
 npm run cli -- reset
 npm run cli -- load fixtures/facts.json      # 46-session story, no model
 npm run cli -- facts
@@ -95,6 +95,14 @@ Compare models on the scored harness, one row each with right, stale, false reca
 ```sh
 npm run compare -- --models claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5,gemini-3.8-flash --suite both
 ```
+
+## Scale
+
+```sh
+MODEL=claude-haiku-5-5 npm run scale -- --sessions 2000 --filler 2 --concurrency 8
+```
+
+Builds a history of thousands of sessions with the same fifteen events, ingests it with parallel extraction (storing stays in session order), then asks the thirteen questions with a timer on each, checks the summary and the forget audit, and prints row counts and file size.
 
 ## Adapters
 
