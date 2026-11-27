@@ -93,7 +93,7 @@ ANSWER_MODEL=claude-opus-5-5
 Compare models on the scored harness, one row each with right, stale, false recall, leak and cost:
 
 ```sh
-npm run compare -- --models claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5,gemini-3-flash-preview
+npm run compare -- --models claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5,gemini-3.8-flash --suite both
 ```
 
 ## Adapters
