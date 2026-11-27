@@ -49,11 +49,13 @@ async function main(): Promise<void> {
   const forgotten = reports.reduce((n, r) => n + r.forgotten.length, 0);
   console.log(`ingest: ${ingestSeconds.toFixed(1)}s total, ${(history.length / ingestSeconds).toFixed(1)} sessions/s, ${stored} facts stored, ${forgotten} forget requests, cost $${memory.cost().usd.toFixed(4)}`);
 
-  // Questions are asked after everything, which is the hard case: thousands of sessions between the fact and the question.
+  // Questions are asked after everything, which is the hard case: thousands of sessions between the fact
+  // and the question. A question scripted for an earlier cutoff is asked as of that session.
   let right = 0;
   for (const question of questions as Question[]) {
     const start = performance.now();
-    const answer = await memory.ask(question.question);
+    const asOf = question.askAt < script.sessions ? { asOf: question.askAt } : {};
+    const answer = await memory.ask(question.question, asOf);
     const verdict = grade(question, answer);
     right += verdict.right ? 1 : 0;
     console.log(`  ${verdict.right ? 'PASS' : `FAIL ${verdict.fail}`.padEnd(17)} ${ms(start).padStart(6)} ${question.id.padEnd(17)} ${answer.text.slice(0, 80)}`);
