@@ -24,6 +24,22 @@ export function openDb(path: string): Db {
 
 export function migrate(db: Db): void {
   db.exec(SCHEMA);
+  rebuildCallsIfOld(db);
+}
+
+// Databases created before the screen purpose carry a narrower CHECK on calls.purpose. SQLite cannot
+// alter a constraint, so the table is rebuilt once with its rows kept.
+function rebuildCallsIfOld(db: Db): void {
+  const row = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'llm_calls'").get() as { sql: string } | undefined;
+  if (row === undefined || row.sql.includes("'screen'")) return;
+  const create = SCHEMA.match(/CREATE TABLE IF NOT EXISTS llm_calls[^;]*;/s)?.[0];
+  if (create === undefined) throw new Error('llm_calls table definition not found in schema');
+  db.exec('BEGIN');
+  db.exec('ALTER TABLE llm_calls RENAME TO llm_calls_old');
+  db.exec(create);
+  db.exec('INSERT INTO llm_calls SELECT * FROM llm_calls_old');
+  db.exec('DROP TABLE llm_calls_old');
+  db.exec('COMMIT');
 }
 
 export function resetDb(db: Db): void {

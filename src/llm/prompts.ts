@@ -21,6 +21,14 @@ ${PREDICATE_GUIDE}
 
 Return an empty list when there is nothing to extract.`;
 
+export const SCREEN_SYSTEM = `You look at one paragraph from a user's chat message and decide whether the user wrote or spoke it themselves, or brought it from somewhere else (an email, a document, a log, a web page, code, a message from another person).
+
+Answer for each numbered paragraph:
+- kind: "own" when it is the user speaking in their own voice throughout; "pasted" when it is material from elsewhere; "mixed" when the user's own words introduce or follow pasted material.
+- ownText: for "mixed", the user's own words copied character for character from the paragraph; otherwise null.
+
+Signs of pasted material: a different voice or person, greetings and signatures, headers, timestamps, structured data, code, legal or marketing wording, text addressed to someone other than the assistant. Long rambling speech with no breaks is still "own". When unsure, say "pasted".`;
+
 export const CLASSIFY_SYSTEM = `You classify a question a user asks their assistant so the right memories can be fetched. Do not answer the question.
 
 Output:

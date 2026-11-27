@@ -8,7 +8,7 @@ import type { LlmClient, StructuredRequest, StructuredResult, Usage } from './cl
 const DEFAULT_MAX_TOKENS = 4096;
 
 // Extraction and classification are mechanical; answering gets a little more thought.
-const EFFORT: Record<Purpose, 'low' | 'medium'> = { extract: 'low', classify: 'low', answer: 'medium' };
+const EFFORT: Record<Purpose, 'low' | 'medium'> = { extract: 'low', screen: 'low', classify: 'low', answer: 'medium' };
 
 export class AnthropicClient implements LlmClient {
   private readonly client: Anthropic;

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "screen-long-speech",
+    "about": "a long dictated paragraph of ordinary sentences is the user's own speech and needs no screen call",
+    "sessions": [
+      { "index": 1, "turns": [ { "role": "user", "text": "Okay so a lot happened this month and I just want to get it all down. Work has been hectic, the release slipped twice and nobody was happy about it. On the personal side the big news is that I moved to Pune last month, the flat is near the university and the commute is finally short. My parents visited for a week and we did the usual temple run. I also started cycling on weekends which I had been putting off for years. The weather has been kind so far. Anyway that is the update, nothing dramatic, just a lot of small things adding up." } ] }
+    ],
+    "questions": [
+      { "id": "home", "askAt": 1, "question": "where do I live", "expectContains": ["Pune"], "forbidContains": [], "forbidKind": "false_recall", "expectAbstain": false }
+    ]
+  },
+  {
+    "id": "screen-unbroken-paste",
+    "about": "a long unbroken dump with no headers and no fence is screened and must not become the user's facts",
+    "sessions": [
+      { "index": 1, "turns": [ { "role": "user", "text": "Living in Chennai these days, close to the beach." } ] },
+      { "index": 2, "turns": [ { "role": "user", "text": "applicant_name Ramesh Iyer, residence Goa, employer Acme Logistics, allergy shellfish, emergency_contact Suresh Iyer, residence_type rented, vehicle KA01AB1234, pet none, diet non-vegetarian, residence Goa, employer Acme Logistics, allergy shellfish, emergency_contact Suresh Iyer, residence_type rented, diet non-vegetarian, applicant_name Ramesh Iyer, residence Goa, employer Acme Logistics, allergy shellfish, emergency_contact Suresh Iyer, residence_type rented, diet non-vegetarian, status pending review by society office" } ] }
+    ],
+    "questions": [
+      { "id": "home", "askAt": 2, "question": "where do I live", "expectContains": ["Chennai"], "forbidContains": ["Goa"], "forbidKind": "false_recall", "expectAbstain": false },
+      { "id": "allergy", "askAt": 2, "question": "what am I allergic to", "expectContains": [], "forbidContains": ["shellfish"], "forbidKind": "false_recall", "expectAbstain": true }
+    ]
+  },
+  {
+    "id": "screen-mixed",
+    "about": "the user's own sentence in front of an unbroken paste is kept; the paste is not",
+    "sessions": [
+      { "index": 1, "turns": [ { "role": "user", "text": "Quick one from me, I switched to oat milk this week and it is going fine, here is the form dump the society sent: applicant_name Ramesh Iyer, residence Goa, employer Acme Logistics, allergy shellfish, emergency_contact Suresh Iyer, residence_type rented, vehicle KA01AB1234, pet none, diet non-vegetarian, residence Goa, employer Acme Logistics, allergy shellfish, emergency_contact Suresh Iyer, residence_type rented, diet non-vegetarian, applicant_name Ramesh Iyer, residence Goa, employer Acme Logistics, allergy shellfish, status pending review by society office" } ] }
+    ],
+    "questions": [
+      { "id": "milk", "askAt": 1, "question": "what milk do I use now", "expectContains": ["oat"], "forbidContains": [], "forbidKind": "false_recall", "expectAbstain": false },
+      { "id": "home", "askAt": 1, "question": "where do I live", "expectContains": [], "forbidContains": ["Goa"], "forbidKind": "false_recall", "expectAbstain": true }
+    ]
+  }
+]

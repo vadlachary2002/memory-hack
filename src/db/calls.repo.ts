@@ -8,7 +8,7 @@ export type PurposeCost = { calls: number; inputTokens: number; outputTokens: nu
 
 export type CostReport = { calls: number; usd: number; byPurpose: Record<Purpose, PurposeCost> };
 
-const PURPOSES: Purpose[] = ['extract', 'classify', 'answer'];
+const PURPOSES: Purpose[] = ['extract', 'screen', 'classify', 'answer'];
 
 export class CallsRepo {
   constructor(private readonly db: Db) {}

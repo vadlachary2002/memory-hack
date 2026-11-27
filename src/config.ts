@@ -1,6 +1,6 @@
 // Model ids, prices and thresholds. Everything tunable lives here.
 
-export type Purpose = 'extract' | 'classify' | 'answer';
+export type Purpose = 'extract' | 'screen' | 'classify' | 'answer';
 
 // USD per million tokens.
 export type Price = { input: number; output: number; cacheRead: number; cacheWrite: number };

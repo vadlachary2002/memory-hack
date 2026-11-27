@@ -30,7 +30,7 @@ TypeScript, Node 22, SQLite (better-sqlite3), Anthropic SDK behind a one-method 
 
 ```sh
 npm install                    # Node 22
-npm test                       # 133 unit tests, no API key needed
+npm test                       # 141 unit tests, no API key needed
 npm run cli -- reset
 npm run cli -- load fixtures/facts.json      # 46-session story, no model
 npm run cli -- facts
@@ -87,6 +87,7 @@ Two providers behind one interface. Any model name starting with `gemini` routes
 ANTHROPIC_API_KEY=...                  # default model claude-opus-5-5
 GEMINI_API_KEY=...                     # with only this key, default becomes gemini-3-flash-preview
 EXTRACT_MODEL=gemini-3-flash-preview   # mix: cheap extraction, Opus answers
+SCREEN_MODEL=claude-haiku-5-5          # the screen call on long unbroken paragraphs; cheapest model is fine
 ANSWER_MODEL=claude-opus-5-5
 ```
 

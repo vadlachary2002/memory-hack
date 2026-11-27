@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS deletions (
 -- Every model call with its cost.
 CREATE TABLE IF NOT EXISTS llm_calls (
   id INTEGER PRIMARY KEY,
-  purpose TEXT NOT NULL CHECK (purpose IN ('extract', 'classify', 'answer')),
+  purpose TEXT NOT NULL CHECK (purpose IN ('extract', 'screen', 'classify', 'answer')),
   model TEXT NOT NULL,
   input_tokens INTEGER NOT NULL,
   output_tokens INTEGER NOT NULL,
