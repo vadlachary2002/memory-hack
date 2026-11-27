@@ -60,6 +60,12 @@ describe('grade', () => {
     expect(grade(byId('forget-direct'), answer(NO_INFO, true)).right).toBe(true);
   });
 
+  it('matches forbidden strings at word starts, with short ones needing a whole word', () => {
+    expect(grade(byId('forget-direct'), answer('That was prior to the move, at a fair price.', true)).right).toBe(true);
+    expect(grade(byId('forget-direct'), answer('You moved in with Pri.', true)).fail).toBe('leak');
+    expect(grade(byId('allergy-weather'), answer('Sunny, and your peanuts are fine.')).fail).toBe('false_recall');
+  });
+
   it('counts leaks of deleted names only after the forget session', () => {
     const before = { id: 'x', askAt: 30, question: 'q', answer: answer('Priya and you adopted Bruno.') };
     const after = { ...before, askAt: 60 };

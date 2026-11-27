@@ -14,9 +14,10 @@ import { SessionInputSchema } from './types.js';
 const USAGE = `usage:
   cli reset                            drop and recreate the database
   cli load <fixture.json>              replay a hand-written fact fixture (no model)
-  cli ingest <sessions.json> [--until N]  ingest sessions through extraction (model call per session)
+  cli ingest <sessions.json> [--until N] [--concurrency N]  ingest sessions (one model call each, N in parallel)
   cli say "<message>"                  send one chat message as a new session (model call)
   cli facts                            list every fact row, erased included
+  cli entities                         list every entity with aliases and roles, erased included
   cli ask "<question>" [--at N]        answer from memory as of session N (two model calls at most)
   cli summary [session]                render the profile, or one session
   cli forget "<name or relation>"     erase a person (name, alias, or words like "my ex") and self-audit
@@ -57,9 +58,11 @@ async function main(args: readonly string[]): Promise<void> {
       );
       const skipped = sessions.filter((session) => memory.hasSession(session.index)).map((session) => session.index);
       if (skipped.length > 0) console.log(`skipping ${skipped.length} session(s) already ingested: s${skipped[0]}..s${skipped[skipped.length - 1]}`);
-      for (const session of sessions) {
-        if (memory.hasSession(session.index)) continue;
-        const report = await memory.ingest(session);
+      const fresh = sessions.filter((session) => !memory.hasSession(session.index));
+      const concurrency = optionValue(rest, '--concurrency') ?? 4;
+      const started = Date.now();
+      const reports = await memory.ingestMany(fresh, { concurrency });
+      for (const report of reports) {
         const rejected = report.rejected.map((item) => `${item.reason}: ${item.candidate}`).join('; ');
         const forgotten = report.forgotten
           .map((item) => `entities ${item.entityIds.join(',') || '-'} erased ${item.erasedFacts.length} stripped ${item.strippedFacts.length} redacted ${item.redactedTurns.length} scan ${item.scanClean ? 'clean' : 'HITS'}`)
@@ -70,6 +73,7 @@ async function main(args: readonly string[]): Promise<void> {
             (forgotten === '' ? '' : `\n  FORGET ${forgotten}`),
         );
       }
+      console.log(`${reports.length} session(s) in ${((Date.now() - started) / 1000).toFixed(1)}s, concurrency ${concurrency}`);
       return;
     }
     case 'say': {
@@ -97,6 +101,13 @@ async function main(args: readonly string[]): Promise<void> {
       for (const fact of memory.facts(true)) {
         const state = fact.erasedAt !== null ? 'erased' : fact.validTo === null ? 'open' : 'closed';
         console.log(`${String(fact.id).padStart(3)} ${state.padEnd(6)} ${fact.tier.padEnd(7)} ${renderLine(fact, nameOf)}`);
+      }
+      return;
+    }
+    case 'entities': {
+      for (const entity of memory.entities()) {
+        const state = entity.erasedAt !== null ? `erased@${entity.erasedAt}` : 'live';
+        console.log(`${String(entity.id).padStart(3)} ${state.padEnd(10)} ${entity.type.padEnd(6)} ${entity.canonicalName ?? '[redacted]'}  aliases [${entity.aliases.join(', ')}]  roles [${entity.roles.join(', ')}]`);
       }
       return;
     }

@@ -43,17 +43,28 @@ export function loadScript(): Script {
   return ScriptSchema.parse(JSON.parse(readFileSync(new URL('./script.json', import.meta.url), 'utf8')));
 }
 
-// Every session: its scripted events, one filler line, and in five of six sessions a "summarise" turn.
-export function generate(script: Script, seed: number = DEFAULT_SEED): Generated {
+export type GenerateOptions = {
+  // Total sessions; the scripted events keep their session numbers, extra sessions are filler.
+  sessions?: number;
+  // Filler user lines per session (each followed by an acknowledgement).
+  fillerPerSession?: number;
+};
+
+// Every session: its scripted events, filler lines, and in five of six sessions a "summarise" turn.
+export function generate(script: Script, seed: number = DEFAULT_SEED, options: GenerateOptions = {}): Generated {
   const random = mulberry32(seed);
   const pick = <T>(items: readonly T[]): T => items[Math.floor(random() * items.length)] as T;
+  const total = Math.max(script.sessions, options.sessions ?? script.sessions);
+  const fillerPerSession = Math.max(1, options.fillerPerSession ?? 1);
   const history: SessionInput[] = [];
-  for (let index = 1; index <= script.sessions; index += 1) {
+  for (let index = 1; index <= total; index += 1) {
     const turns: SessionInput['turns'] = [];
     for (const event of script.events.filter((item) => item.session === index)) {
       turns.push({ role: 'user', text: event.user }, { role: 'assistant', text: pick(script.assistant) });
     }
-    turns.push({ role: 'user', text: pick(script.filler) }, { role: 'assistant', text: pick(script.assistant) });
+    for (let line = 0; line < fillerPerSession; line += 1) {
+      turns.push({ role: 'user', text: pick(script.filler) }, { role: 'assistant', text: pick(script.assistant) });
+    }
     if (index % 6 !== 0) turns.push({ role: 'user', text: script.summaryTurn }, { role: 'assistant', text: script.summaryReply });
     history.push({ index, turns });
   }

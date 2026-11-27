@@ -28,7 +28,7 @@ export type Summary = { runs: RunScore[]; median: Omit<RunScore, 'verdicts' | 'd
 export function grade(question: Question, answer: BatchAnswer['answer']): Verdict {
   const text = answer.text;
   const lower = text.toLowerCase();
-  const forbiddenHit = question.forbidContains.some((needle) => lower.includes(needle.toLowerCase()));
+  const forbiddenHit = question.forbidContains.some((needle) => forbiddenIn(lower, needle.toLowerCase()));
   if (forbiddenHit) return { id: question.id, scenario: question.scenario, right: false, fail: question.forbidKind, text };
   if (question.expectAbstain) {
     const abstained = answer.abstained || text === UNKNOWN || text === NO_INFO;
@@ -44,7 +44,7 @@ export function answerLeaks(script: Script, answers: readonly BatchAnswer[]): nu
   for (const item of answers) {
     const lower = item.answer.text.toLowerCase();
     const forbidden = [...script.forbiddenAlways, ...(item.askAt >= script.forgetSession ? script.forbiddenAfterForget : [])];
-    if (forbidden.some((needle) => wordIn(lower, needle.toLowerCase()))) leaks += 1;
+    if (forbidden.some((needle) => forbiddenIn(lower, needle.toLowerCase()))) leaks += 1;
   }
   return leaks;
 }
@@ -104,9 +104,12 @@ export function formatSummary(summary: Summary): string {
   return lines.join('\n');
 }
 
-function wordIn(text: string, needle: string): boolean {
+// A forbidden string must start a word. Short ones ("Pri") must also end the word, so "prior" and
+// "price" do not count; longer ones ("peanut", "allerg") may be prefixes, so "peanuts" and "allergic" do.
+export function forbiddenIn(text: string, needle: string): boolean {
   const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}(?=[^\\p{L}\\p{N}]|$)`, 'iu').test(text);
+  const end = needle.length <= 4 ? '(?=[^\\p{L}\\p{N}]|$)' : '';
+  return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}${end}`, 'iu').test(text);
 }
 
 function option(name: string, fallback: number): number {

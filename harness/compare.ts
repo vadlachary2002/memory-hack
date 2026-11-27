@@ -52,6 +52,10 @@ export function formatRows(rows: readonly Row[]): string {
         `${cell(caseRight === undefined ? undefined : `${caseRight}/${caseTotal}`, 14)} ${cell(caseLeak === undefined ? undefined : String(caseLeak), 6)} ${cell(caseCost === undefined ? undefined : `$${caseCost.toFixed(4)}`, 9)} ` +
         `$${((h?.cost ?? 0) + (caseCost ?? 0)).toFixed(4)}${row.error === undefined ? '' : `  (partial: ${row.error.slice(0, 80)})`}`,
     );
+    if (h !== undefined) {
+      for (const verdict of h.verdicts.filter((v) => !v.right)) lines.push(`    FAIL ${verdict.fail?.padEnd(12)} harness/${verdict.id}: ${verdict.text.slice(0, 80)}`);
+      if (h.dbLeak) lines.push('    FAIL leak         harness: database still contains a forbidden string after the run');
+    }
     if (c !== undefined && hasFailures(c)) {
       for (const result of c) {
         for (const verdict of result.verdicts.filter((v) => !v.right)) lines.push(`    FAIL ${verdict.fail?.padEnd(12)} ${result.id}/${verdict.id}: ${verdict.text.slice(0, 80)}`);
