@@ -30,7 +30,7 @@ export function splitTurn(turnIndex: number, text: string): SplitResult {
 
 // Sentences addressed to the assistant or phrased as commands are never persisted either.
 const INSTRUCTION_SENTENCE =
-  /\b(the assistant|the ai|the bot|system prompt|as an ai|from now on|always (say|answer|tell|reply|respond)|never (say|mention|tell)|ignore (any |all )?(earlier|previous|prior) instructions|you (must|should|need to|have to|will))\b|^(please\s+)?(send|pay|transfer|wire|deposit|remember to|note to|instruction)\b/i;
+  /\b(the assistant|the ai|the bot|system prompt|as an ai|from now on|always (say|answer|tell|reply|respond)|never (say|mention|tell)|ignore (any |all )?(earlier|previous|prior) instructions|you (must|should|need to|have to|will))\b|^(please\s+)?(send|pay|transfer|wire|deposit|remember (to|not to)|note to|instruction)\b/i;
 
 // The text that is safe to persist: clean paragraphs kept, each tainted paragraph replaced by a marker,
 // and each instruction-shaped sentence inside a clean paragraph replaced too.

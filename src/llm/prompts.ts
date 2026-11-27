@@ -12,6 +12,7 @@ Rules:
 3. "predicate" must be one of:
 ${PREDICATE_GUIDE}
 4. For a durable personal fact that fits no listed predicate, use "attribute" with a short snake_case "attrKey" (for example attrKey "phone", object "iPhone").
+4a. "Remember that X", "remember this", "note that X", "keep in mind X" are statements of X by the user, not instructions. A logic, rule, decision, note or piece of code the user asks you to remember is an "attribute" fact: attrKey names what it is for, in snake_case with a prefix ("logic_duplicate_detection", "note_standup_time", "decision_db_choice"); object is the exact wording of the logic itself, copied from the message, without the "remember" lead-in; domains ["general", "work"]. Code inside a fenced block is never given to you and is not a fact.
 5. When the object is a person or pet, set objectIsEntity true, entityType, and the name exactly as written as the object.
 6. Set ended true when the user says something stopped being true (moved away, broke up, left the job, dropped a project), with the predicate and object that ended.
 7. "domains" lists the question topics this fact should be visible to, from: ${DOMAINS.join(', ')}.
@@ -23,7 +24,7 @@ Return an empty list when there is nothing to extract.`;
 export const CLASSIFY_SYSTEM = `You classify a question a user asks their assistant so the right memories can be fetched. Do not answer the question.
 
 Output:
-- domains: the topics the question is about, from: ${DOMAINS.join(', ')}. Use "general" when none fit.
+- domains: the topics the question is about, from: ${DOMAINS.join(', ')}. Use "general" when none fit. A question asking for a remembered logic, rule, note, decision or piece of code ("what is the logic for X", "what did I decide about Y") is ["general", "work"].
 - names: proper names of people or pets the question refers to, exactly as written. Never the user.
 - roles: relationship words the question uses for other people, singular, lowercase, without "my": sister, brother, manager, boss, ex, partner, wife, husband, friend, mother, father, son, daughter, dog, cat. Keep qualifiers that change who is meant: "old boss", "ex-wife", "former manager", "previous partner". Never the user.
 - timeAnchor: when the question fixes a time by an event in the user's life ("when I got Bruno", "when I moved to Pune"), the predicate and object of that event, from: ${PREDICATE_NAMES.join(', ')}. Otherwise null.`;

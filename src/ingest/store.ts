@@ -16,8 +16,11 @@ export type StoreOutcome =
   | { kind: 'rejected'; reason: RejectReason };
 
 // Text addressed to the assistant or phrased as an instruction is not a statement about the user.
+// "Remember that I moved" and "note that my logic is" are statements the user asks to keep, so only
+// the command forms ("remember to send", "note to self: pay") are refused here; the account-number
+// and addressed-to-assistant checks still run on whatever follows "remember".
 const INSTRUCTION =
-  /^(please\s+)?(send|pay|transfer|wire|deposit|remember|always|never|ignore|forward|do not|don't|make sure|note that|from now on|you must|you should|you need to|note to|instruction)\b/i;
+  /^(please\s+)?(send|pay|transfer|wire|deposit|remember (to|not to)|always|never|ignore|forward|do not|don't|make sure|from now on|you must|you should|you need to|note to|instruction)\b/i;
 const ADDRESSED =
   /\b(you (must|should|need to|have to|will)|the assistant|the ai|the bot|system prompt|as an ai|from now on|always (say|answer|tell|reply|respond)|never (say|mention|tell))\b/i;
 
