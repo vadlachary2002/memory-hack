@@ -4,7 +4,7 @@ import { dbPathForUser } from './config.js';
 import { CallsRepo, type CostReport } from './db/calls.repo.js';
 import { openDb, resetDb, type Db } from './db/connection.js';
 import { DeletionsRepo, type DeletionRow } from './db/deletions.repo.js';
-import { EntitiesRepo } from './db/entities.repo.js';
+import { EntitiesRepo, type EntityRow } from './db/entities.repo.js';
 import { FactsRepo, type FactRow } from './db/facts.repo.js';
 import { TurnsRepo } from './db/turns.repo.js';
 import { audit, forget, type ForgetContext } from './forget/forget.js';
@@ -108,6 +108,10 @@ export class Memory {
 
   nameOf(entityId: number): string {
     return this.repos.entities.nameOf(entityId);
+  }
+
+  entities(): EntityRow[] {
+    return this.repos.entities.all(true);
   }
 
   // Escape hatch for the fixture loader and tests only.

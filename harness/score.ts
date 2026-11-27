@@ -28,7 +28,8 @@ export type Summary = { runs: RunScore[]; median: Omit<RunScore, 'verdicts' | 'd
 export function grade(question: Question, answer: BatchAnswer['answer']): Verdict {
   const text = answer.text;
   const lower = text.toLowerCase();
-  const forbiddenHit = question.forbidContains.some((needle) => lower.includes(needle.toLowerCase()));
+  // Whole words only: the alias "Pri" must not match "prior" or "price".
+  const forbiddenHit = question.forbidContains.some((needle) => wordIn(lower, needle.toLowerCase()));
   if (forbiddenHit) return { id: question.id, scenario: question.scenario, right: false, fail: question.forbidKind, text };
   if (question.expectAbstain) {
     const abstained = answer.abstained || text === UNKNOWN || text === NO_INFO;

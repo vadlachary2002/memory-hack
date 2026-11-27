@@ -17,6 +17,7 @@ const USAGE = `usage:
   cli ingest <sessions.json> [--until N] [--concurrency N]  ingest sessions (one model call each, N in parallel)
   cli say "<message>"                  send one chat message as a new session (model call)
   cli facts                            list every fact row, erased included
+  cli entities                         list every entity with aliases and roles, erased included
   cli ask "<question>" [--at N]        answer from memory as of session N (two model calls at most)
   cli summary [session]                render the profile, or one session
   cli forget "<name or relation>"     erase a person (name, alias, or words like "my ex") and self-audit
@@ -100,6 +101,13 @@ async function main(args: readonly string[]): Promise<void> {
       for (const fact of memory.facts(true)) {
         const state = fact.erasedAt !== null ? 'erased' : fact.validTo === null ? 'open' : 'closed';
         console.log(`${String(fact.id).padStart(3)} ${state.padEnd(6)} ${fact.tier.padEnd(7)} ${renderLine(fact, nameOf)}`);
+      }
+      return;
+    }
+    case 'entities': {
+      for (const entity of memory.entities()) {
+        const state = entity.erasedAt !== null ? `erased@${entity.erasedAt}` : 'live';
+        console.log(`${String(entity.id).padStart(3)} ${state.padEnd(10)} ${entity.type.padEnd(6)} ${entity.canonicalName ?? '[redacted]'}  aliases [${entity.aliases.join(', ')}]  roles [${entity.roles.join(', ')}]`);
       }
       return;
     }
