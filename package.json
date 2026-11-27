@@ -13,10 +13,12 @@
     "cli": "tsx src/cli.ts",
     "generate": "tsx harness/generate.ts",
     "harness": "tsx harness/score.ts",
-    "cases": "tsx harness/cases.ts"
+    "cases": "tsx harness/cases.ts",
+    "compare": "tsx harness/compare.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.137.0",
+    "@google/genai": "3.6.1",
     "better-sqlite3": "13.2.0",
     "zod": "4.6.7"
   },

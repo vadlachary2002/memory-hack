@@ -30,7 +30,7 @@ TypeScript, Node 22, SQLite (better-sqlite3), Anthropic SDK behind a one-method 
 
 ```sh
 npm install                    # Node 22
-npm test                       # 97 unit tests, no API key needed
+npm test                       # 103 unit tests, no API key needed
 npm run cli -- reset
 npm run cli -- load fixtures/facts.json      # 46-session story, no model
 npm run cli -- facts
@@ -78,6 +78,23 @@ npm run cases -- --only partner    # a subset by id prefix
 ```
 
 Cases live in `harness/cases.json` and need no code to extend: sessions, questions with what the answer must and must not contain, whether it must abstain, and which strings must be gone from the database after a forget. The unit tests prove the code rules with a fake model; the cases prove the phrasing with the real one.
+
+## Providers and cost
+
+Two providers behind one interface. Any model name starting with `gemini` routes to Gemini, anything else to Anthropic, per purpose:
+
+```sh
+ANTHROPIC_API_KEY=...                  # default model claude-opus-5-5
+GEMINI_API_KEY=...                     # with only this key, default becomes gemini-3-flash-preview
+EXTRACT_MODEL=gemini-3-flash-preview   # mix: cheap extraction, Opus answers
+ANSWER_MODEL=claude-opus-5-5
+```
+
+Compare models on the scored harness, one row each with right, stale, false recall, leak and cost:
+
+```sh
+npm run compare -- --models claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5,gemini-3-flash-preview
+```
 
 ## Adapters
 

@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { startServer } from './adapters/http.js';
 import { dbPath } from './config.js';
 import { FixtureSchema, loadFixture } from './fixture.js';
-import { AnthropicClient } from './llm/anthropic.js';
-import type { LlmClient } from './llm/client.js';
+import { GeminiClient } from './llm/gemini.js';
+import { createClient, keyFor } from './llm/provider.js';
 import { Memory } from './memory.js';
 import { renderLine } from './render.js';
 import { SessionInputSchema } from './types.js';
@@ -22,6 +22,7 @@ const USAGE = `usage:
   cli forget "<name or relation>"     erase a person (name, alias, or words like "my ex") and self-audit
   cli audit "<name>"                   scan every text column for a name; passes when nothing is found
   cli cost                             model calls and spend so far
+  cli models                           list the Gemini model ids your GEMINI_API_KEY can use
   cli serve [--port N]                 HTTP adapter: POST /ingest /ask /forget /reset, GET /summary /audit /cost
 set TRACE=1 to print one line per decision`;
 
@@ -32,7 +33,7 @@ main(process.argv.slice(2)).catch((error: unknown) => fail(error instanceof Erro
 
 async function main(args: readonly string[]): Promise<void> {
   const [command, arg, ...rest] = args;
-  const memory = new Memory({ dbPath: dbPath(), llm: lazyClient() });
+  const memory = new Memory({ dbPath: dbPath(), llm: createClient() });
   const nameOf = (id: number): string => memory.nameOf(id);
 
   switch (command) {
@@ -128,6 +129,12 @@ async function main(args: readonly string[]): Promise<void> {
       console.log(`listening on port ${typeof address === 'object' && address !== null ? address.port : port}`);
       return;
     }
+    case 'models': {
+      const key = keyFor('gemini');
+      if (key === undefined) return fail('GEMINI_API_KEY is not set');
+      for (const name of await new GeminiClient(key).listModels()) console.log(name);
+      return;
+    }
     case 'cost': {
       const report = memory.cost();
       for (const [purpose, cost] of Object.entries(report.byPurpose)) {
@@ -139,20 +146,6 @@ async function main(args: readonly string[]): Promise<void> {
     default:
       return fail(USAGE);
   }
-}
-
-// The Anthropic client is created on first use so offline commands never need a key.
-function lazyClient(): LlmClient {
-  let real: LlmClient | undefined;
-  return {
-    structured(request) {
-      if (real === undefined) {
-        if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY is not set (put it in .env or the environment)');
-        real = new AnthropicClient();
-      }
-      return real.structured(request);
-    },
-  };
 }
 
 function loadFixtureInto(memory: Memory, fixture: z.infer<typeof FixtureSchema>): string {
