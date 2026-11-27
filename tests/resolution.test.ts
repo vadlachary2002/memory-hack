@@ -140,7 +140,7 @@ describe('specific kinds within a category', () => {
     const entities = new EntitiesRepo(memory.rawDb());
     const id = resolveObject(
       entities,
-      { turnIndex: 1, predicate: 'partner_of', attrKey: null, object: 'Neha', quote: 'Neha is my girlfriend', objectIsEntity: true, entityType: 'person', aliases: [], domains: [], ended: false },
+      { turnIndex: 1, about: 'me', predicate: 'partner_of', attrKey: null, object: 'Neha', quote: 'Neha is my girlfriend', objectIsEntity: true, entityType: 'person', aliases: [], domains: [], ended: false },
       1,
       'Neha is my girlfriend, we met in Pune.',
     );

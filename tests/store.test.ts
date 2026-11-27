@@ -15,6 +15,7 @@ let turnId: number;
 function candidate(overrides: Partial<Candidate> & Pick<Candidate, 'predicate' | 'object' | 'quote'>): Candidate {
   return {
     turnIndex: 1,
+    about: 'me',
     attrKey: null,
     objectIsEntity: false,
     entityType: null,

@@ -32,7 +32,7 @@ afterEach(() => {
 describe('http adapter', () => {
   it('ingests, answers, forgets, audits and reports cost over JSON', async () => {
     client.enqueue('extract', {
-      facts: [{ turnIndex: 1, predicate: 'lives_in', attrKey: null, object: 'Pune', quote: 'I moved to Pune', objectIsEntity: false, entityType: null, aliases: [], domains: ['location'], ended: false }],
+      facts: [{ turnIndex: 1, about: 'me', predicate: 'lives_in', attrKey: null, object: 'Pune', quote: 'I moved to Pune', objectIsEntity: false, entityType: null, aliases: [], domains: ['location'], ended: false }],
     });
     const ingest = await call('POST', '/ingest', { index: 1, turns: [{ role: 'user', text: 'I moved to Pune last month.' }] });
     expect(ingest.status).toBe(200);

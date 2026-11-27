@@ -9,13 +9,13 @@ const SPANS: Span[] = [
 ];
 
 function candidate(overrides: Partial<Candidate> & Pick<Candidate, 'predicate' | 'object' | 'quote' | 'turnIndex'>): Candidate {
-  return { attrKey: null, objectIsEntity: false, entityType: null, aliases: [], domains: [], ended: false, ...overrides };
+  return { about: 'me', attrKey: null, objectIsEntity: false, entityType: null, aliases: [], domains: [], ended: false, ...overrides };
 }
 
 describe('validateCandidates', () => {
   it('drops a paraphrased object', () => {
     const { accepted, rejected } = validateCandidates(
-      [candidate({ turnIndex: 1, predicate: 'lives_in', object: 'Pune city', quote: 'I moved to Pune last month' })],
+      [candidate({ turnIndex: 1, about: 'me', predicate: 'lives_in', object: 'Pune city', quote: 'I moved to Pune last month' })],
       SPANS,
     );
     expect(accepted).toEqual([]);
@@ -25,8 +25,8 @@ describe('validateCandidates', () => {
   it('drops a quote that is not in the clean text of its turn', () => {
     const { rejected } = validateCandidates(
       [
-        candidate({ turnIndex: 1, predicate: 'lives_in', object: 'Pune', quote: 'I live in Pune now' }),
-        candidate({ turnIndex: 9, predicate: 'lives_in', object: 'Pune', quote: 'I moved to Pune last month' }),
+        candidate({ turnIndex: 1, about: 'me', predicate: 'lives_in', object: 'Pune', quote: 'I live in Pune now' }),
+        candidate({ turnIndex: 9, about: 'me', predicate: 'lives_in', object: 'Pune', quote: 'I moved to Pune last month' }),
       ],
       SPANS,
     );
@@ -36,8 +36,8 @@ describe('validateCandidates', () => {
   it('keeps exact quotes, ignoring whitespace differences, and keeps attributes', () => {
     const { accepted, rejected } = validateCandidates(
       [
-        candidate({ turnIndex: 1, predicate: 'lives_in', object: 'Pune', quote: 'I moved  to Pune last month' }),
-        candidate({ turnIndex: 3, predicate: 'attribute', attrKey: 'phone', object: 'iPhone', quote: 'Switched to an iPhone' }),
+        candidate({ turnIndex: 1, about: 'me', predicate: 'lives_in', object: 'Pune', quote: 'I moved  to Pune last month' }),
+        candidate({ turnIndex: 3, about: 'me', predicate: 'attribute', attrKey: 'phone', object: 'iPhone', quote: 'Switched to an iPhone' }),
       ],
       SPANS,
     );
@@ -46,7 +46,7 @@ describe('validateCandidates', () => {
   });
 
   it('drops empty objects or quotes', () => {
-    const { rejected } = validateCandidates([candidate({ turnIndex: 1, predicate: 'lives_in', object: ' ', quote: 'I moved to Pune' })], SPANS);
+    const { rejected } = validateCandidates([candidate({ turnIndex: 1, about: 'me', predicate: 'lives_in', object: ' ', quote: 'I moved to Pune' })], SPANS);
     expect(rejected[0]?.reason).toBe('empty');
   });
 });
@@ -55,8 +55,8 @@ describe('extractSession', () => {
   it('sends clean spans labelled by turn and validates what comes back', async () => {
     const client = new FakeClient().enqueue('extract', {
       facts: [
-        candidate({ turnIndex: 1, predicate: 'lives_in', object: 'Pune', quote: 'I moved to Pune last month', domains: ['location'] }),
-        candidate({ turnIndex: 3, predicate: 'attribute', attrKey: 'phone', object: 'iPhone 15', quote: 'Switched to an iPhone' }),
+        candidate({ turnIndex: 1, about: 'me', predicate: 'lives_in', object: 'Pune', quote: 'I moved to Pune last month', domains: ['location'] }),
+        candidate({ turnIndex: 3, about: 'me', predicate: 'attribute', attrKey: 'phone', object: 'iPhone 15', quote: 'Switched to an iPhone' }),
       ],
     });
     const result = await extractSession(client, SPANS);
