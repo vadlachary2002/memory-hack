@@ -8,19 +8,21 @@ Files under `src/`. Read top to bottom; indented items are branches.
 2. `Memory.ingest` → `ingestSession` in `ingest/ingestSession.ts`.
    1. `rejectKnown`: `turns.hasSession(index)` true → throw, nothing else runs.
    2. `extractPhase` (no database writes).
-      1. Each user turn → `splitTurn` in `ingest/taint.ts`: paragraphs → `taintReason`, first match wins: fence → `fence`; From:/Subject:/Forwarded → `forwarded`; `>` line → `quoted`; URL → `url`; over 400 chars → `too_long`. Tainted paragraphs never reach a model; after a fence or header everything following is tainted. Clean paragraphs keep their turn index.
-      2. Each clean paragraph → `detectForget` in `ingest/intents.ts`: "forget X" → a `ForgetTarget` is queued and the paragraph is dropped from clean; else it stays.
-      3. Clean empty → return, no model call.
-      4. `extractSession` in `ingest/extract.ts`: one model call (`client.structured`, purpose `extract`; `llm/provider.ts` routes to Anthropic or Gemini by model name; prompt `EXTRACT_SYSTEM` in `llm/prompts.ts`) → candidates. `validateCandidates` → `validate`, first failure wins: `empty`; quote not in that turn's clean text → `quote_not_in_turn`; object not in quote → `object_not_in_quote`.
+      1. Each user turn → `splitTurn` in `ingest/taint.ts`: paragraphs → `taintReason`, first match wins: fence → `fence`; From:/Subject:/Forwarded → `forwarded`; `>` line → `quoted`; URL → `url`. Over 400 chars → `readsAsSpeech` (`sentences` split at sentence ends; all at or under 400 → speech, clean; one stretch over 400 with no sentence end → `too_long`, a suspicion). After a fence or header everything following is tainted.
+      2. Tainted list split: `too_long` → suspects; anything else → tainted, never seen by a model.
+      3. Each clean paragraph → `detectForget` in `ingest/intents.ts`: "forget X" → a `ForgetTarget` is queued and the paragraph dropped from clean; else it stays.
+      4. Suspects present → `screenSuspects` in `ingest/screen.ts`, one model call (purpose `screen`, `SCREEN_SYSTEM`): `own` → whole paragraph released to clean; `mixed` → `release` checks the own words are verbatim in the paragraph, then releases only them; `pasted`, no verdict or unknown index → tainted. Released paragraphs are kept in `released` for the transcript.
+      5. Clean empty → return, no extract call.
+      6. `extractSession` in `ingest/extract.ts`: one model call (purpose `extract`; `llm/provider.ts` routes to Anthropic or Gemini; `EXTRACT_SYSTEM` in `llm/prompts.ts`, rule 4a: "remember that X", "note that X", "my logic for P is X" are statements; a logic, rule, decision or note becomes an `attribute` fact keyed like `logic_duplicate_detection` with the exact wording as object). `validateCandidates` → `validate`, first failure wins: `empty`; quote not in that turn's clean text → `quote_not_in_turn`; object not in quote → `object_not_in_quote`.
    3. `storePhase` (writes, in session order).
       1. `entities.ensureUser`, `turns.addSession`.
-      2. Each turn → `storableText` (`[pasted content removed: reason]`, `dropInstructions` → `[instruction removed]`) → `scrubAccountNumbers` in `ingest/secrets.ts` → `turns.addTurn`.
-      3. `calls.record('extract')`.
+      2. Each turn → `storableText(text, released)`: clean paragraph → `dropInstructions` ("remember to", "note to", send, pay, addressed-to-assistant sentences → `[instruction removed]`); released suspect → only the released words; other tainted → `[pasted content removed: reason]` → `scrubAccountNumbers` in `ingest/secrets.ts` → `turns.addTurn`.
+      3. `calls.record('extract')`, and `calls.record('screen')` when the screen ran.
       4. Candidates about the user first, then others.
       5. Each candidate:
-         1. `resolveObject` in `ingest/resolve.ts`: not relational and not an entity → undefined; else `entities.upsert` with the role implied by the predicate plus `specificRolesIn` from `roles.ts` (beagle → dog, wife → wife); existing name or alias → merged.
+         1. `resolveObject` in `ingest/resolve.ts`: not relational and not an entity → undefined; else `entities.upsert` with the role implied by the predicate plus `specificRolesIn` from `roles.ts`; existing name or alias → merged.
          2. `storeCandidate` in `ingest/store.ts`:
-            1. `gate`: account number → `account_number`; command verb (`INSTRUCTION`) or addressed to the assistant (`ADDRESSED`) on the quote or on the sentence it sits in (`sentenceContaining`) → `not_about_user`.
+            1. `gate`: account number → `account_number`; command verb (`INSTRUCTION`: send, pay, transfer, "remember to", "remember not to", "note to", always, never, ignore...) or addressed to the assistant (`ADDRESSED`) on the quote or on the sentence it sits in (`sentenceContaining`) → `not_about_user`. "Remember that I moved" and "remember this logic" pass.
             2. `subjectFor` → `attribute` in `ingest/attribution.ts`: negation about the user → rejected; "Name and I" → user; "my <role> Name" → that person, created with the role; "Name verb" → that person, created as contact, unless the name is the fact's own object → user; leading pronoun → last capitalised name before it, none → rejected; else → user.
             3. `ended` → `facts.closeOpen` → relational → `markFormer` → `closed`.
             4. Else `facts.insert` in `db/facts.repo.ts` (one transaction): `currentFor` open rows with same subject, predicate, attrKey; same value → `noop`; functional predicate → `close` each open row (superseded); insert with `valid_from = session`, domains, tier from `tierOf`; then `markSupersededFormer`.
@@ -33,7 +35,7 @@ Files under `src/`. Read top to bottom; indented items are branches.
 1. Entry: `cli.ts` case `ask` (`--at N` optional) or `POST /ask` → `Memory.ask` in `memory.ts`.
    1. `asksAboutForgetting` in `recall/deletions.ts` → `describeDeletions` from the deletions log, kinds and counts, no names, no model call. Stop.
    2. Else `ask` in `recall/ask.ts`.
-2. `classify` in `recall/classify.ts`: one model call, `CLASSIFY_SYSTEM` → `{ domains, names, roles, timeAnchor }`; `calls.record('classify')`.
+2. `classify` in `recall/classify.ts`: one model call, `CLASSIFY_SYSTEM` → `{ domains, names, roles, timeAnchor }`; a question for a remembered logic, note or decision goes to domains general and work, where the extractor filed it; `calls.record('classify')`.
 3. `select` in `recall/select.ts`, pure code:
    1. Names: `entities.byName` → id; unknown but a role word → treated as role; unknown → `abstain: unknown_name`.
    2. Roles: `holdersOf` → `allByRole`; former holders when `asksAboutPast` (`roles.ts`) or nobody current; nobody → `abstain: unknown_role`.
