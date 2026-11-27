@@ -24,12 +24,13 @@ export async function answer(
   nameOf: NameLookup,
   rules: readonly string[] = [],
   asOf?: number,
+  dates: ReadonlyMap<number, string> = new Map(),
 ): Promise<Generated> {
   const { value, usage } = await client.structured({
     purpose: 'answer',
     schema: AnswerOutputSchema,
     system: ANSWER_SYSTEM,
-    user: buildPrompt(question, candidates, nameOf, rules, asOf),
+    user: buildPrompt(question, candidates, nameOf, rules, asOf, dates),
     maxTokens: 1024,
   });
   const allowed = new Set(candidates.map((fact) => fact.id));
@@ -48,17 +49,23 @@ export function stripUncited(output: AnswerOutput, allowed: ReadonlySet<number>)
 }
 
 // When answering as of a session, "current" means current at that session, and the labels say so.
+// dates maps session numbers to calendar dates when the history carries them, so "when" questions
+// can be answered with a date instead of a session number.
 export function buildPrompt(
   question: string,
   candidates: readonly FactRow[],
   nameOf: NameLookup,
   rules: readonly string[],
   asOf?: number,
+  dates: ReadonlyMap<number, string> = new Map(),
 ): string {
   const lines = candidates.map((fact) => `[${fact.id}] ${label(fact, nameOf, asOf)} quote: "${fact.quote ?? ''}"`);
   const ruleBlock = rules.length === 0 ? '' : `\n\nDerivation rules:\n${rules.map((rule) => `- ${rule}`).join('\n')}`;
   const timeBlock = asOf === undefined ? '' : `\n\nAnswer as of session ${asOf}. "current as of s${asOf}" means true at that time, whatever happened later.`;
-  return `Facts:\n${lines.join('\n')}${ruleBlock}${timeBlock}\n\nQuestion: ${question}`;
+  const mentioned = new Set(candidates.flatMap((fact) => [fact.validFrom, ...(fact.validTo === null ? [] : [fact.validTo])]));
+  const dated = [...mentioned].filter((session) => dates.has(session)).sort((a, b) => a - b);
+  const dateBlock = dated.length === 0 ? '' : `\n\nSession dates: ${dated.map((session) => `s${session} = ${dates.get(session) ?? ''}`).join(', ')}. Use the date, not the session number, when asked when something happened.`;
+  return `Facts:\n${lines.join('\n')}${ruleBlock}${timeBlock}${dateBlock}\n\nQuestion: ${question}`;
 }
 
 function label(fact: FactRow, nameOf: NameLookup, asOf: number | undefined): string {

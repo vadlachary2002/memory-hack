@@ -4,8 +4,8 @@ Read this first, then `docs/plan.md`. Everything below was true on 22 Nov 2026.
 
 ## Where things stand
 
-- All seven build steps plus two follow-ups (live-run fix, category-word resolution) are built and pushed. 111 unit tests, no API key needed. See README for commands.
-- Branches, one per step, each based on the previous: `step-1-ledger` (PR #4 into main), `step-2-ingest` (#5), `step-3-forget` (#6), `step-4-ask` (#7), `step-5-temporal` (#8), `step-6-harness` (#9), `step-7-adapters` (#10), `step-8-live-fixes` (#11), `step-9-resolution` (#12), `step-10-cases` (#13), `step-11-specific-roles` (#14), `step-12-past-and-asof` (#15), `step-13-providers` (#16), `step-14-about-others` (#17), `step-15-scale` (#18). `main-hi6j98` is the cloud working branch and tracks the latest step. Merge in order; GitHub retargets the next PR when the base branch is deleted.
+- All seven build steps plus two follow-ups (live-run fix, category-word resolution) are built and pushed. 115 unit tests, no API key needed. See README for commands.
+- Branches, one per step, each based on the previous: `step-1-ledger` (PR #4 into main), `step-2-ingest` (#5), `step-3-forget` (#6), `step-4-ask` (#7), `step-5-temporal` (#8), `step-6-harness` (#9), `step-7-adapters` (#10), `step-8-live-fixes` (#11), `step-9-resolution` (#12), `step-10-cases` (#13), `step-11-specific-roles` (#14), `step-12-past-and-asof` (#15), `step-13-providers` (#16), `step-14-about-others` (#17), `step-15-scale` (#18), `step-16-hidden-style` (#19). `main-hi6j98` is the cloud working branch and tracks the latest step. Merge in order; GitHub retargets the next PR when the base branch is deleted.
 - The PR title and description for each step live in `docs/prs/0N-*.md` on that step's branch.
 - Node 22 is required (better-sqlite3 13, vitest 5). WAL mode is off on purpose; it failed on the user's macOS temp dir.
 - `ANTHROPIC_API_KEY` goes in `.env`. The first live run (22 Nov, Opus 5.5) scored 13/13 right, 0 stale, 0 false recall, $0.12 per full replay. Its one finding, pasted content kept in the raw transcript, is fixed in step 8 (`step-8-live-fixes`).

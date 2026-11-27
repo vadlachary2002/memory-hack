@@ -95,3 +95,15 @@ describe('questions about forgetting', () => {
     expect(describeDeletions([]).text).toContain('No.');
   });
 });
+
+describe('session dates in the answer prompt', () => {
+  it('lists dates for the sessions the candidates reference and tells the model to use them', () => {
+    const pune = memory.facts().find((fact) => fact.objectText === 'Pune');
+    if (!pune) throw new Error('no Pune');
+    const dates = new Map([[2, '2026-01-10'], [18, '2026-05-02']]);
+    const prompt = buildPrompt('when did I move', [pune], () => '', [], undefined, dates);
+    expect(prompt).toContain('s2 = 2026-01-10');
+    expect(prompt).toContain('s18 = 2026-05-02');
+    expect(buildPrompt('q', [pune], () => '', [])).not.toContain('Session dates');
+  });
+});

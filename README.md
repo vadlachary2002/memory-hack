@@ -30,7 +30,7 @@ TypeScript, Node 22, SQLite (better-sqlite3), Anthropic SDK behind a one-method 
 
 ```sh
 npm install                    # Node 22
-npm test                       # 111 unit tests, no API key needed
+npm test                       # 115 unit tests, no API key needed
 npm run cli -- reset
 npm run cli -- load fixtures/facts.json      # 46-session story, no model
 npm run cli -- facts
@@ -94,6 +94,12 @@ Compare models on the scored harness, one row each with right, stale, false reca
 
 ```sh
 npm run compare -- --models claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5,gemini-3.8-flash --suite both
+```
+
+## Hidden-style cases
+
+```sh
+npm run hidden                     # twelve organiser-style traps with unseen names: distractors, negation, correction, sideways forget probes, prose poison, dates
 ```
 
 ## Scale

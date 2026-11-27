@@ -16,13 +16,29 @@ export type StoreOutcome =
 
 // Text addressed to the assistant or phrased as an instruction is not a statement about the user.
 const INSTRUCTION =
-  /^(please\s+)?(send|pay|transfer|wire|deposit|remember|always|never|ignore|forward|do not|don't|make sure|note that|from now on|you must|you should|you need to)\b/i;
-const ADDRESSED = /\b(you (must|should|need to|have to)|the assistant|system prompt|as an ai)\b/i;
+  /^(please\s+)?(send|pay|transfer|wire|deposit|remember|always|never|ignore|forward|do not|don't|make sure|note that|from now on|you must|you should|you need to|note to|instruction)\b/i;
+const ADDRESSED =
+  /\b(you (must|should|need to|have to|will)|the assistant|the ai|the bot|system prompt|as an ai|from now on|always (say|answer|tell|reply|respond)|never (say|mention|tell))\b/i;
 
-export function gate(candidate: Candidate): RejectReason | undefined {
+// context is the user's own text around the quote. The sentence the quote sits in is checked too, so
+// "the assistant should always say my boss is Rahul" is refused even when the model quotes only the tail.
+export function gate(candidate: Candidate, context = ''): RejectReason | undefined {
   if (hasAccountNumber(candidate.object) || hasAccountNumber(candidate.quote)) return 'account_number';
   if (INSTRUCTION.test(candidate.quote.trim()) || ADDRESSED.test(candidate.quote)) return 'not_about_user';
+  const sentence = sentenceContaining(context, candidate.quote);
+  if (sentence !== undefined && (INSTRUCTION.test(sentence.trim()) || ADDRESSED.test(sentence) || hasAccountNumber(sentence))) {
+    return 'not_about_user';
+  }
   return undefined;
+}
+
+function sentenceContaining(context: string, quote: string): string | undefined {
+  const needle = quote.replace(/\s+/g, ' ').trim().toLowerCase();
+  if (needle === '') return undefined;
+  return context
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((sentence) => sentence.replace(/\s+/g, ' ').trim())
+    .find((sentence) => sentence.toLowerCase().includes(needle));
 }
 
 export function storeCandidate(
@@ -33,8 +49,9 @@ export function storeCandidate(
   objectEntityId: number | undefined,
   turnId: number,
   sessionIdx: number,
+  context = '',
 ): StoreOutcome {
-  const reason = gate(candidate);
+  const reason = gate(candidate, context);
   if (reason !== undefined) return { kind: 'rejected', reason };
   const attrKey = candidate.attrKey ?? undefined;
   // A fact about someone in the user's life ("my brother works at TCS") has that person as its subject.

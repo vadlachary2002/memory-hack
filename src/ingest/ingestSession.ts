@@ -113,7 +113,7 @@ export function storePhase(repos: Repos, prepared: Prepared, onForget?: OnForget
     if (turnId === undefined) continue;
     const context = prepared.clean.filter((span) => span.turnIndex === candidate.turnIndex).map((span) => span.text).join(' ');
     const objectEntityId = resolveObject(repos.entities, candidate, session.index, context);
-    const outcome = storeCandidate(repos.facts, repos.entities, userId, candidate, objectEntityId, turnId, session.index);
+    const outcome = storeCandidate(repos.facts, repos.entities, userId, candidate, objectEntityId, turnId, session.index, context);
     switch (outcome.kind) {
       case 'stored':
         report.stored.push(outcome.id);

@@ -24,8 +24,9 @@ export type Case = z.infer<typeof CaseSchema>;
 
 export type CaseResult = { id: string; about: string; verdicts: Verdict[]; dbLeaks: string[]; cost: number };
 
-export function loadCases(): Case[] {
-  return z.array(CaseSchema).parse(JSON.parse(readFileSync(new URL('./cases.json', import.meta.url), 'utf8')));
+// Default file is cases.json; hidden.json holds the organiser-style set with unseen names and traps.
+export function loadCases(file = 'cases.json'): Case[] {
+  return z.array(CaseSchema).parse(JSON.parse(readFileSync(new URL(`./${file}`, import.meta.url), 'utf8')));
 }
 
 export async function runCase(item: Case, llm: LlmClient): Promise<CaseResult> {
@@ -88,7 +89,7 @@ if (process.argv[1] !== undefined && import.meta.url === new URL(process.argv[1]
     process.exit(1);
   }
   const only = option('--only');
-  const cases = loadCases().filter((item) => only === undefined || item.id.startsWith(only));
+  const cases = loadCases(option('--file') ?? 'cases.json').filter((item) => only === undefined || item.id.startsWith(only));
   const results = await runCases(cases, createClient());
   console.log(formatResults(results));
   process.exitCode = hasFailures(results) ? 1 : 0;

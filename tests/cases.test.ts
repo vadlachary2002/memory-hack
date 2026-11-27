@@ -31,3 +31,12 @@ describe('scenario cases file', () => {
     expect(formatResults([result])).toContain('PASS forget-same-session');
   });
 });
+
+describe('hidden-style cases file', () => {
+  it('is valid and uses names that do not appear in the practice script', () => {
+    const hidden = loadCases('hidden.json');
+    expect(hidden.length).toBeGreaterThanOrEqual(10);
+    const text = JSON.stringify(hidden);
+    for (const name of ['Priya', 'Bruno', 'Arjun', 'Meera']) expect(text).not.toContain(name);
+  });
+});

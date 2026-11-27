@@ -14,6 +14,7 @@
     "generate": "tsx harness/generate.ts",
     "harness": "tsx harness/score.ts",
     "cases": "tsx harness/cases.ts",
+    "hidden": "tsx harness/cases.ts --file hidden.json",
     "compare": "tsx harness/compare.ts",
     "scale": "tsx harness/scale.ts"
   },
