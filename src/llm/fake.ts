@@ -21,7 +21,8 @@ export class FakeClient implements LlmClient {
   async structured<T>(request: StructuredRequest<T>): Promise<StructuredResult<T>> {
     this.seen.push({ purpose: request.purpose, system: request.system, user: request.user });
     const queue = this.queues.get(request.purpose) ?? [];
-    const next = queue.shift();
+    // No queued screen verdict means "pasted": the safe default, so existing tests keep their taint.
+    const next = queue.shift() ?? (request.purpose === 'screen' ? { verdicts: [] } : undefined);
     if (next === undefined) throw new Error(`FakeClient has no queued ${request.purpose} response`);
     return { value: request.schema.parse(next), usage: { ...FAKE_USAGE } };
   }

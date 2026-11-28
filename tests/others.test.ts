@@ -22,7 +22,7 @@ beforeEach(async () => {
 });
 
 describe('about never creates entities', () => {
-  it('falls back to the user for "Priya and I", "we", "my manager" and strangers, and leaves no new rows', async () => {
+  it('"Priya and I" and "we" are the user; a named stranger as sentence subject gets a contact row, never the user', async () => {
     const client = new FakeClient().enqueue('extract', {
       facts: [
         candidate({ about: 'Priya and I', predicate: 'adopted_pet', object: 'Bruno', quote: 'Priya and I adopted Bruno', objectIsEntity: true, entityType: 'pet' }),
@@ -33,9 +33,12 @@ describe('about never creates entities', () => {
     const fresh = new Memory({ dbPath: ':memory:', llm: client });
     await fresh.ingest({ index: 1, turns: [{ role: 'user', text: 'Priya and I adopted Bruno. we moved to Pune. Rahul works at Zoho' }] });
     const user = fresh.facts().find((f) => f.predicate === 'lives_in')?.subjectEntityId;
-    expect(fresh.facts().every((f) => f.subjectEntityId === user)).toBe(true);
+    expect(fresh.facts().find((f) => f.predicate === 'adopted_pet')?.subjectEntityId).toBe(user);
+    const job = fresh.facts().find((f) => f.predicate === 'works_at');
+    expect(job?.subjectEntityId).not.toBe(user);
     const names = (fresh.rawDb().prepare('SELECT canonical_name FROM entities').all() as { canonical_name: string | null }[]).map((r) => r.canonical_name);
-    expect(names).toEqual(['user', 'Bruno']);
+    expect(names).toEqual(['user', 'Bruno', 'Rahul']);
+    expect(fresh.entities().find((e) => e.canonicalName === 'Rahul')?.roles).toEqual(['contact']);
   });
 });
 

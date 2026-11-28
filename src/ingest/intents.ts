@@ -8,6 +8,23 @@ const FORGET =
 // Words that trail the target and carry no identity.
 const TRAILING = /\s*(?:completely|entirely|permanently|forever|please|now|from (?:your )?memory|from memory)\s*$/i;
 
+// Relationship endings stated in plain words. Too important to leave to the extractor's "ended" flag.
+export type Ending = { predicate: 'partner_of'; name?: string };
+
+const BREAKUP_WITH_NAME = /\b([A-Z][\p{L}'-]+)\s+and\s+(?:I|me)\s+(?:have\s+)?(?:broke up|split up|are done|are over|separated|divorced|called it off|ended things|parted ways)/u;
+const BREAKUP_WITH_NAME_2 = /\b(?:broke up with|split up with|divorced|am done with|ended things with|dumped)\s+([A-Z][\p{L}'-]+)\b/u;
+const BREAKUP_PLAIN = /\b(?:we|my (?:partner|wife|husband|girlfriend|boyfriend) and I)\s+(?:have\s+)?(?:broke up|split up|are done|are over|separated|divorced|called it off)\b/i;
+
+export function detectEndings(text: string): Ending[] {
+  const endings: Ending[] = [];
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {
+    const named = BREAKUP_WITH_NAME.exec(sentence) ?? BREAKUP_WITH_NAME_2.exec(sentence);
+    if (named?.[1] !== undefined) endings.push({ predicate: 'partner_of', name: named[1] });
+    else if (BREAKUP_PLAIN.test(sentence)) endings.push({ predicate: 'partner_of' });
+  }
+  return endings;
+}
+
 export function detectForget(text: string): ForgetTarget[] {
   const targets: ForgetTarget[] = [];
   for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {

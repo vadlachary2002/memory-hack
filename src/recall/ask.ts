@@ -32,7 +32,8 @@ export async function ask(repos: AskRepos, client: LlmClient, question: string, 
 
   const nameOf = (id: number): string => repos.entities.nameOf(id);
   const rules = derivationRules(repos.facts, repos.entities.ensureUser(), classification.domains, selection.asOf);
-  const generated = await answer(client, question, selection.candidates, nameOf, rules, selection.asOf);
+  const dates = new Map(repos.turns.sessions().filter((s) => s.startedAt !== null).map((s) => [s.idx, s.startedAt ?? '']));
+  const generated = await answer(client, question, selection.candidates, nameOf, rules, selection.asOf, dates);
   cost += repos.calls.record('answer', generated.usage, sessionIdx);
   trace('answer', { cited: generated.cited, rules: rules.length, cost });
   return { ...base, text: generated.text, cited: generated.cited, abstained: false, cost };

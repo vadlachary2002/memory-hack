@@ -1,0 +1,125 @@
+[
+  {
+    "id": "logic-english",
+    "about": "a logic stated in one English sentence, asked back by problem name",
+    "sessions": [
+      {
+        "index": 1,
+        "turns": [
+          {
+            "role": "user",
+            "text": "Remember this logic for the duplicate-detection problem: sort the list first, then walk it once and flag any element equal to the one before it."
+          }
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "ask",
+        "askAt": 1,
+        "question": "what is the logic for the duplicate-detection problem",
+        "expectContains": [
+          "sort"
+        ],
+        "forbidContains": [],
+        "forbidKind": "false_recall",
+        "expectAbstain": false
+      }
+    ]
+  },
+  {
+    "id": "logic-pseudocode-fenced",
+    "about": "pseudo-code inside a code fence is pasted content by design: never stored, so the question abstains",
+    "sessions": [
+      {
+        "index": 1,
+        "turns": [
+          {
+            "role": "user",
+            "text": "Remember this logic for the two-sum problem:\n\n```\nfor each number x in the list:\n  if target - x is in seen: return the pair\n  add x to seen\n```"
+          }
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "ask",
+        "askAt": 1,
+        "question": "what is the logic for the two-sum problem",
+        "expectContains": [],
+        "forbidContains": [
+          "seen"
+        ],
+        "forbidKind": "false_recall",
+        "expectAbstain": true
+      }
+    ]
+  },
+  {
+    "id": "logic-code-inline",
+    "about": "real code written inline in the sentence, no fence",
+    "sessions": [
+      {
+        "index": 1,
+        "turns": [
+          {
+            "role": "user",
+            "text": "My logic for the retry problem is: retries = 0; while retries < 3 and not ok: sleep(2 ** retries); retries += 1."
+          }
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "ask",
+        "askAt": 1,
+        "question": "what logic did I give you for the retry problem",
+        "expectContains": [
+          "retries"
+        ],
+        "forbidContains": [],
+        "forbidKind": "false_recall",
+        "expectAbstain": false
+      }
+    ]
+  },
+  {
+    "id": "logic-civil",
+    "about": "an engineering logic in plain words, asked back with a different phrasing",
+    "sessions": [
+      {
+        "index": 1,
+        "turns": [
+          {
+            "role": "user",
+            "text": "For the traffic-light timing problem my logic is: measure the queue length on each arm every cycle, and give the longest queue the green for twice its usual share."
+          }
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "ask",
+        "askAt": 1,
+        "question": "how did I say I would time the traffic lights",
+        "expectContains": [
+          "queue"
+        ],
+        "forbidContains": [],
+        "forbidKind": "false_recall",
+        "expectAbstain": false
+      },
+      {
+        "id": "other",
+        "askAt": 1,
+        "question": "what is my logic for the bridge-load problem",
+        "expectContains": [],
+        "forbidContains": [
+          "queue"
+        ],
+        "forbidKind": "false_recall",
+        "expectAbstain": true
+      }
+    ]
+  }
+]

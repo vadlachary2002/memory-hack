@@ -54,16 +54,19 @@ export function audit(ctx: ForgetContext, needles: readonly string[]): AuditRepo
 
 function forgetEntity(ctx: ForgetContext, name: string): ForgetReport {
   const matches = resolveEntities(ctx.entities, name);
-  if (matches.length !== 1) {
+  if (matches.length > 1) {
     return {
       entityIds: matches.map((entity) => entity.id),
       erasedFacts: [],
       strippedFacts: [],
       redactedTurns: [],
-      probes: [{ name: matches.length === 0 ? 'resolved' : 'unambiguous', passed: false }],
-      scanClean: matches.length === 0,
+      probes: [{ name: 'unambiguous', passed: false }],
+      scanClean: false,
     };
   }
+  // A name with no entity row can still live in quotes and turns ("Divya and I adopted a labrador").
+  // Then the name itself is the target: strip and redact wherever it appears, and prove it.
+  if (matches.length === 0) return forgetName(ctx, stripLeading(name));
   const entity = matches[0] as EntityRow;
   const needles = cleanNeedles([entity.canonicalName, ...entity.aliases]);
 
@@ -99,6 +102,41 @@ function forgetEntity(ctx: ForgetContext, name: string): ForgetReport {
   ];
   const scan = audit(ctx, needles);
   return { entityIds: [entity.id], erasedFacts, strippedFacts, redactedTurns, probes, scanClean: scan.clean };
+}
+
+// Forget a bare name that never became an entity: erase facts whose object is that name, strip it
+// from every other quote and object, redact turns, then scan. Nothing to erase and nothing found is
+// a clean no-op, reported as resolved: false so the caller knows nobody was known by that name.
+function forgetName(ctx: ForgetContext, name: string): ForgetReport {
+  const needles = cleanNeedles([name]);
+  if (needles.length === 0 || !isNameLike(name)) {
+    return { entityIds: [], erasedFacts: [], strippedFacts: [], redactedTurns: [], probes: [{ name: 'resolved', passed: false }], scanClean: true };
+  }
+  const direct = ctx.facts.all().filter((fact) => (fact.objectText ?? '').trim().toLowerCase() === name.toLowerCase());
+  const erasedFacts = ctx.facts.eraseByIds(direct.map((fact) => fact.id), ctx.atSession);
+  const strippedFacts: number[] = [];
+  for (const fact of ctx.facts.all()) {
+    if (!containsName(fact.quote, needles) && !containsName(fact.objectText, needles)) continue;
+    ctx.facts.rewriteText(fact.id, fact.objectText === null ? null : redactNames(fact.objectText, needles), fact.quote === null ? null : redactNames(fact.quote, needles));
+    strippedFacts.push(fact.id);
+  }
+  const turnIds = ctx.turns.all().filter((turn) => containsName(turn.text, needles)).map((turn) => turn.id);
+  const redactedTurns = ctx.turns.redactByIds(turnIds, ctx.atSession);
+  const touched = erasedFacts.length + strippedFacts.length + redactedTurns.length > 0;
+  const scan = audit(ctx, needles);
+  return {
+    entityIds: [],
+    erasedFacts,
+    strippedFacts,
+    redactedTurns,
+    probes: [{ name: 'resolved', passed: touched }, { name: 'summary', passed: !scan.summaryHit }],
+    scanClean: scan.clean,
+  };
+}
+
+// A plausible person name: one or two capitalised words, not a relationship word.
+function isNameLike(name: string): boolean {
+  return /^[A-Z][\p{L}'-]+(\s+[A-Z][\p{L}'-]+)?$/u.test(name.trim());
 }
 
 // Forget by predicate or domain: erase the facts and redact the turns they came from.
