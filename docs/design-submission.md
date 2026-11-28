@@ -121,3 +121,62 @@ Dates come from the session, not from words in a sentence, so "in 2024" is answe
 it was said. Pasted blocks are never memory, even when introduced with "remember this". A fact
 the extractor misses is a missed recall, not a wrong one. With one more day: a second cheap
 model call confirming the subject of every extracted fact before it is stored.
+
+## 11. Sources, and what this design takes from each
+
+I read the three systems people name when they say "agent memory", two benchmarks, and one
+older paper, before fixing this design. Nothing here is copied; each choice below says what
+was borrowed and what was rejected.
+
+**Mem0** (Mem0 Inc, San Francisco; open-source memory layer launched in 2024 out of the
+earlier Embedchain project; paper "Mem0: Building Production-Ready AI Agents with Scalable
+Long-Term Memory", 2025). Pattern: one model call extracts short facts from the conversation;
+a second model call compares each new fact with similar stored memories and decides ADD,
+UPDATE, DELETE or NONE; facts live in a vector store with an optional graph.
+Taken: extraction into short atomic facts rather than summaries; "what changed" as an explicit
+update decision per fact. Rejected: letting a model make the update decision. Here the
+predicate's rules make it in code (one-value predicates close the old row), so a change is
+deterministic and auditable. Also rejected: vector similarity as the retrieval gate, because
+similarity fetches the allergy for a weather question.
+
+**Zep and Graphiti** (Zep, founded 2023 by Daniel Chalef; Graphiti open-sourced in 2024;
+paper "Zep: A Temporal Knowledge Graph Architecture for Agent Memory", 2025). Pattern: each
+episode goes to a model that extracts entities and relationships into a graph; every edge is
+bi-temporal, with the time it became true, the time it stopped, and the time it was recorded;
+old edges are invalidated, never deleted; retrieval mixes text, embedding and graph search.
+Taken: the bi-temporal edge. This ledger's valid_from and valid_to by session, "close, never
+overwrite", and entities with roles are Graphiti's idea reduced to one SQLite table. Rejected:
+invalidation as the only form of removal. The track demands deletion that removes everything
+learnt, so forget here is physical, scoped to the entity, and proven by a scan.
+
+**Letta, formerly MemGPT** (UC Berkeley paper "MemGPT: Towards LLMs as Operating Systems",
+2023, Charles Packer and Sarah Wooders; company founded 2024). Pattern: the agent holds small
+memory blocks inside its context and edits them itself through tools, paging older material in
+and out of archival storage like an operating system.
+Taken: the separation of a small always-visible profile from a larger store that is searched
+on demand; here the rendered profile versus the ledger. Rejected: the agent writing its own
+memory. A model with a write tool is exactly the path by which a pasted instruction becomes a
+stored rule. In this design no model call can write to the database.
+
+**LOCOMO** (Snap Research, 2024): a long-conversation memory benchmark with multi-session
+dialogues and questions on single-hop, multi-hop, temporal and open-domain recall, plus
+adversarial questions whose answer is not in the conversation. **LongMemEval** (2024): tests
+information extraction, multi-session reasoning, temporal reasoning, knowledge updates and
+abstention. Taken: the question categories became the harness categories here: current value,
+value before a change, value at an anchored time, updates, abstention on things never said.
+Both benchmarks reward abstention explicitly, which is why "I don't know" is a first-class
+answer with its own code path and zero model calls.
+
+**Generative Agents** (Park et al., Stanford, 2023): memory stream with recency, importance
+and relevance scores, and periodic "reflection" that writes summaries back into memory.
+Rejected on purpose: written-back reflections are derived memory that cannot be partially
+deleted. Summaries here are rendered from facts every time and never stored.
+
+**Right to erasure** (GDPR Article 17) and the machine-unlearning literature: the standard
+for "forgotten" is that the data and what was derived from it are gone, and that this can be
+demonstrated. That standard is the forget contract here: erase, strip, redact, then probe and
+scan, with a report that carries ids and counts only.
+
+In one line: Mem0's atomic facts, Graphiti's bi-temporal edges, Letta's small profile over a
+larger store, and the benchmarks' abstention category, with the model kept out of the write
+path and deletion made physical and provable.
